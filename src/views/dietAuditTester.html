@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BN Diet Safety Audit</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .conflict-diet_type_violation {
+            background-color: #fee2e2;
+            border-bottom: 2px solid #ef4444;
+            cursor: help;
+            padding: 0 2px;
+            border-radius: 2px;
+            transition: all 0.2s;
+        }
+
+        .conflict-allergy_conflict {
+            background-color: #ffedd5;
+            border-bottom: 2px solid #f97316;
+            cursor: help;
+        }
+
+        .loader {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #6366f1;
+            border-radius: 50%;
+            width: 18px;
+            height: 18px;
+            animation: spin 1s linear infinite;
+            display: inline-block;
+        }
+
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+    </style>
+</head>
+
+<body class="bg-slate-100 p-6 min-h-screen">
+
+    <div class="max-w-7xl mx-auto space-y-6">
+        <header
+            class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex flex-col md:flex-row justify-between items-center gap-4">
+            <div>
+                <h1 class="text-xl font-bold text-slate-900">🛡️ Diet AI Safety Engine</h1>
+                <p class="text-slate-500 text-sm">Testing Extraction & Recipe Grounding</p>
+            </div>
+            <div class="flex gap-2">
+                <input id="userId" type="number" placeholder="User ID"
+                    class="border p-2 rounded-lg w-28 outline-none focus:ring-2 focus:ring-indigo-500">
+                <input id="dietId" type="number" placeholder="Diet ID"
+                    class="border p-2 rounded-lg w-28 outline-none focus:ring-2 focus:ring-indigo-500">
+                <button onclick="runAudit()" id="auditBtn"
+                    class="bg-indigo-600 text-white px-5 py-2 rounded-lg font-semibold hover:bg-indigo-700 transition active:scale-95 disabled:bg-indigo-300">
+                    <span id="btnText">Execute Audit</span>
+                </button>
+            </div>
+        </header>
+
+        <div id="detailsPanel" class="hidden grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div class="lg:col-span-2 bg-indigo-50 p-5 rounded-2xl border border-indigo-100">
+                <h3 class="text-indigo-800 font-bold text-xs uppercase mb-3 tracking-widest">Client Health Context</h3>
+                <div id="clientDetails" class="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm text-indigo-900">
+                </div>
+            </div>
+            <div class="bg-slate-50 p-5 rounded-2xl border border-slate-200 flex flex-col gap-4">
+                <div>
+                    <h3 class="text-slate-700 font-bold text-xs uppercase mb-3 tracking-widest">Grounded Template Info
+                    </h3>
+                    <div id="templateDetails" class="grid grid-cols-2 gap-4 text-sm text-slate-600">
+                    </div>
+                </div>
+                <div>
+                    <h3 class="text-slate-700 font-bold text-xs uppercase mb-3 tracking-widest">ICL Don't Buy</h3>
+                    <div id="iclDetails" class="text-sm text-orange-600 font-bold flex flex-wrap gap-1">
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
+            <div class="lg:col-span-1 space-y-4">
+                <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200">
+                    <h2 class="font-bold text-slate-800 mb-4 text-sm uppercase tracking-wider text-center">Audit Results
+                    </h2>
+                    <div id="conflictList" class="space-y-3">
+                        <p class="text-slate-400 text-sm italic text-center">Pending audit...</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="lg:col-span-3 bg-white p-8 rounded-2xl shadow-sm border border-slate-200 relative">
+                <div id="processingOverlay"
+                    class="hidden absolute inset-0 bg-white/60 backdrop-blur-[1px] flex items-center justify-center z-10 rounded-2xl">
+                    <div class="text-center">
+                        <div class="loader !w-10 !h-10 !border-4 mb-2"></div>
+                        <p class="text-sm font-bold text-indigo-600">Auditing Diet...</p>
+                    </div>
+                </div>
+
+                <h2 class="font-bold text-slate-900 mb-6">Live Diet Preview</h2>
+                <div id="dietContent"
+                    class="prose prose-slate max-w-none p-6 border-2 border-dashed border-slate-100 rounded-xl bg-slate-50 min-h-[500px]">
+                    <p class="text-slate-300 text-center mt-20">Results will appear here.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        async function runAudit() {
+            const userId = document.getElementById('userId').value;
+            const dietId = document.getElementById('dietId').value;
+            const btn = document.getElementById('auditBtn');
+            const overlay = document.getElementById('processingOverlay');
+
+            if (!userId || !dietId) return alert("Please enter both IDs");
+
+            btn.disabled = true;
+            document.getElementById('btnText').innerHTML = `<span class="loader mr-2"></span>Processing...`;
+            overlay.classList.remove('hidden');
+
+            try {
+                const response = await fetch('/api/v1/diet-audit/run-safety-check', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ user_id: userId, diet_id: parseInt(dietId) })
+                });
+
+                const result = await response.json();
+                if (result.status === 'success') {
+                    renderResults(result.data);
+                } else {
+                    alert("Audit Error: " + result.message);
+                }
+            } catch (err) {
+                alert("Network Error");
+            } finally {
+                btn.disabled = false;
+                document.getElementById('btnText').innerHTML = "Execute Audit";
+                overlay.classList.add('hidden');
+            }
+        }
+
+        function renderSuggestion(suggestion) {
+            if (!suggestion) return '';
+
+            if (suggestion.type === 'ingredient_swap' && suggestion.swap_instruction) {
+                return `
+                <div class="mt-3 pt-3 border-t border-red-200">
+                    <p class="text-[10px] font-bold text-emerald-700 uppercase tracking-wider mb-1">🔄 Ingredient Fix</p>
+                    <p class="text-xs text-emerald-800 bg-emerald-50 p-2 rounded-md leading-relaxed">${suggestion.swap_instruction}</p>
+                </div>`;
+            }
+
+            if (suggestion.type === 'full_replacement' && suggestion.alternative_dishes && suggestion.alternative_dishes.length > 0) {
+                const alts = suggestion.alternative_dishes.map(alt => `
+                <div class="flex items-start gap-2 mb-1.5">
+                    <span class="text-indigo-500 mt-0.5">•</span>
+                    <div>
+                        <a href="https://www.balancenutrition.in/recipes/${encodeURIComponent(alt.category_name)}/${alt.slug}" target="_blank" 
+                           class="text-xs font-bold text-indigo-700 hover:underline">${alt.title}</a>
+                        <p class="text-[10px] text-slate-500 leading-snug">${alt.reason}</p>
+                    </div>
+                </div>`).join('');
+
+                return `
+                <div class="mt-3 pt-3 border-t border-red-200">
+                    <p class="text-[10px] font-bold text-indigo-700 uppercase tracking-wider mb-2">💡 BN Alternatives (${suggestion.alternative_dishes.length})</p>
+                    <div class="bg-indigo-50 p-2 rounded-md">${alts}</div>
+                </div>`;
+            }
+
+            return '';
+        }
+
+        window.showMedicalConflicts = false;
+        window.auditData = null;
+
+        function toggleMedicalConflicts() {
+            window.showMedicalConflicts = !window.showMedicalConflicts;
+            const btn = document.getElementById('toggleMedBtn');
+            if (btn) btn.innerText = window.showMedicalConflicts ? 'Hide Conflicts' : 'Show Conflicts';
+            renderConflictsUI();
+        }
+
+        function renderResults(data) {
+            window.auditData = data;
+            const { audit_results, diet_template, client_context } = data;
+            document.getElementById('detailsPanel').classList.remove('hidden');
+
+            // 1. Expanded Client Details
+            document.getElementById('clientDetails').innerHTML = `
+            <div><p class="text-[10px] text-indigo-400 uppercase font-bold">Diet Type</p><p class="font-bold">${client_context.eating_habit || 'N/A'}</p></div>
+            <div><p class="text-[10px] text-indigo-400 uppercase font-bold">Allergies</p><p class="font-bold">${client_context.food_allergies || 'None'}</p></div>
+            <div><p class="text-[10px] text-indigo-400 uppercase font-bold">Aversions</p><p class="font-bold">${client_context.food_aversions || 'None'}</p></div>
+            <div>
+                <p class="text-[10px] text-red-500 uppercase font-bold flex items-center justify-between">
+                    Medical Issues
+                    <button id="toggleMedBtn" onclick="toggleMedicalConflicts()" class="bg-red-100 text-red-600 px-2 py-0.5 rounded text-[9px] hover:bg-red-200 uppercase transition tracking-wider">Show Conflicts</button>
+                </p>
+                <p class="font-bold text-red-700">${client_context.medical_issues || 'None'}</p>
+            </div>
+        `;
+
+            // 2. Template Metadata
+            document.getElementById('templateDetails').innerHTML = `
+            <div><p class="text-[10px] text-slate-400 uppercase font-bold">Diet ID</p><p class="font-bold">#${diet_template.diet_id}</p></div>
+            <div><p class="text-[10px] text-slate-400 uppercase font-bold">Audit Scope</p><p class="font-bold">${diet_template.diet_name}</p></div>
+        `;
+
+            // 2B. ICL Exclusions
+            const iclArray = client_context.icl_exclusions || [];
+            document.getElementById('iclDetails').innerHTML = iclArray.length > 0
+                ? iclArray.map(item => `<span class="bg-orange-100 text-orange-800 px-2 py-1 rounded text-xs">${item}</span>`).join('')
+                : '<span class="text-slate-500 font-normal">None</span>';
+
+            renderConflictsUI();
+        }
+
+        function renderConflictsUI() {
+            if (!window.auditData) return;
+            const { audit_results, diet_template } = window.auditData;
+
+            // Filter medical conflicts based on UI state
+            const visibleResults = window.showMedicalConflicts
+                ? audit_results
+                : audit_results.filter(c => !String(c.conflict_type).toUpperCase().includes('MEDICAL'));
+
+            // 3. Conflict Sidebar (with Phase 3 suggestions)
+            const list = document.getElementById('conflictList');
+            list.innerHTML = visibleResults.length > 0
+                ? visibleResults.map(c => `
+                <div class="p-3 bg-red-50 border-l-4 border-red-500 rounded-lg shadow-sm">
+                    <p class="font-bold text-slate-900 text-sm">${c.dish_name}</p>
+                    <p class="text-[10px] font-black text-red-600 uppercase mt-1">${c.conflicting_ingredient}</p>
+                    <p class="text-xs text-slate-600 mt-2 leading-relaxed">${c.reason}</p>                    
+                    <p class="text-xs text-slate-600 mt-2 text-orange-600 uppercase">(${c.conflict_type})</p>
+                    ${c.suggestion ? renderSuggestion(c.suggestion) : ''}
+                </div>
+            `).join('')
+                : '<p class="text-green-600 text-sm font-medium text-center">✅ No conflicts found.</p>';
+
+            // 4. Preview Rendering
+            const display = document.getElementById('dietContent');
+            const mealSlots = [
+                { label: 'Early Morning', key: 'on_rising' },
+                { label: 'Breakfast', key: 'breakfast' },
+                { label: 'Mid Morning', key: 'mid_morning' },
+                { label: 'Lunch', key: 'lunch' },
+                { label: 'After Lunch', key: 'post_lunch' },
+                { label: 'Evening Snack', key: 'tea_eve' },
+                { label: 'Pre Workout', key: 'pre_workout' },
+                { label: 'Post Workout', key: 'post_workout' },
+                { label: 'Pre Dinner', key: 'pre_dinner' },
+                { label: 'Dinner', key: 'dinner' },
+                { label: 'Post Dinner', key: 'post_dinner' },
+                { label: 'Before Sleep', key: 'bed_time' },
+            ];
+
+            let fullHtml = '<div class="space-y-8">';
+            mealSlots.forEach(slot => {
+                if (diet_template[slot.key]) {
+                    fullHtml += `<div><h4 class="text-indigo-600 border-b pb-1 mb-2 font-bold">${slot.label}</h4>${diet_template[slot.key]}</div>`;
+                }
+            });
+            fullHtml += '</div>';
+
+            visibleResults.forEach(conflict => {
+                const escapedName = conflict.dish_name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                const regex = new RegExp(`(${escapedName})`, 'gi');
+                fullHtml = fullHtml.replace(regex, `<span class="conflict-diet_type_violation" title="${conflict.reason}">$1 ⚠️</span>`);
+            });
+
+            display.innerHTML = fullHtml;
+        }
+    </script>
+</body>
+
+</html>

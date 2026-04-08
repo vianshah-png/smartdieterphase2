@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Day Planner</title>
+    <style>
+      .email-container {
+        font-family: Arial, sans-serif;
+        max-width: 600px;
+        margin: 0;
+        padding: 20px;
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        margin: 20px 0;
+      }
+      th,
+      td {
+        border: 1px solid #ddd;
+        padding: 8px;
+        text-align: left;
+      }
+      .bold {
+        font-weight: bold;
+      }
+      .footer {
+        text-align: center;
+        font-size: 12px;
+        color: #666;
+        margin-top: 20px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="email-container">
+      <!-- <p>Call Booked by Counsellor Yesterday: <%= yesterday_calls %></p>
+      <p>
+        Call Booked By Lead & Counsellor on DB For Today: <%= today_calls %>
+      </p> -->
+      <%- table %>
+      <table>
+        <tr>
+          <td>Notes:</td>
+          <td><%= note %></td>
+        </tr>
+      </table>
+      <!-- <table border="2px solid black">
+        <tr>
+          <td class="bold" colspan="2">Balance Payment:</td>
+        </tr>
+        <tr>
+          <td>Due Tomorrow:</td>
+          <td><%= tomorrow_due %></td>
+        </tr>
+        <tr>
+          <td>Due Today:</td>
+          <td><%= today_due %></td>
+        </tr>
+        <tr>
+          <td>Over Due:</td>
+          <td><%= over_due %></td>
+        </tr>
+      </table> -->
+      <div class="footer">
+        <p>© <%= year %> Balance Nutrition. All rights reserved.</p>
+      </div>
+    </div>
+  </body>
+</html>

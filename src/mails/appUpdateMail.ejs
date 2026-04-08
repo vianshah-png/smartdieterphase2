@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <title>Communication Issue Notice</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        line-height: 1.6;
+        color: #333;
+        background-color: #f9f9f9;
+        padding: 20px;
+      }
+      .container {
+        background: #ffffff;
+        border-radius: 8px;
+        padding: 20px;
+        max-width: 600px;
+        margin: auto;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      }
+      .highlight {
+        font-weight: bold;
+        color: #d9534f;
+      }
+      .button {
+        background-color: #007bff;
+        color: #fff;
+        padding: 10px 15px;
+        text-decoration: none;
+        border-radius: 4px;
+        display: inline-block;
+        margin-top: 10px;
+      }
+      .footer {
+        margin-top: 30px;
+        font-size: 0.9em;
+        color: #777;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <p>Hello <%= userName %>,</p>
+
+      <p>
+        Your messages, weight updates, and other communications are
+        <span class="highlight">not reaching your mentor</span>.
+      </p>
+      <p>Your mentor is also unable to respond to you.</p>
+
+      <p><strong>Please follow these steps to resolve the issue:</strong></p>
+      <ol>
+        <li>
+          Click the button below to update the latest version:
+          <br />
+          <a
+            href="<%= appLink %>"
+            style="
+              background-color: #007bff;
+              color: #ffffff;
+              padding: 10px 15px;
+              text-decoration: none;
+              border-radius: 4px;
+              display: inline-block;
+              margin-top: 10px;
+            "
+          >
+            Update App
+          </a>
+        </li>
+      </ol>
+
+      <p><strong>PFA your login details:</strong></p>
+      <ul>
+        <li><strong>Username:</strong> <%= userEmail %></li>
+        <li><strong>Password:</strong> <%= userPassword %></li>
+      </ul>
+
+      <p class="footer">
+        P.S. For further assistance, contact our Client Services Team at
+        <strong>8928001617</strong> between
+        <strong>10:00 AM – 7:00 PM IST</strong>.
+      </p>
+    </div>
+  </body>
+</html>

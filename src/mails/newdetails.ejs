@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <style>
+      body {
+        font-family: Helvetica, Arial, sans-serif;
+        margin: 0;
+        padding: 0;
+        background-color: #ffffff;
+        color: #202020;
+      }
+      .container {
+        max-width: 800px;
+        margin: 10px auto;
+        background-color: #ffffff;
+        padding: 20px;
+      }
+      .logo {
+        text-align: center;
+        padding: 10px 0;
+      }
+      .message {
+        padding: 0 18px;
+        font-size: 16px;
+        line-height: 150%;
+      }
+      .login-box {
+        background-color: #ccfdff;
+        padding: 18px;
+        margin: 20px 18px;
+        font-family: Verdana, Geneva, sans-serif;
+        line-height: 160%;
+        color: #030303;
+        border-radius: 4px;
+      }
+      .link {
+        color: #1a7e8b;
+        font-weight: bold;
+        text-decoration: none;
+      }
+      .contact {
+        color: #008080;
+        font-weight: bold;
+      }
+      .signature {
+        text-align: left;
+        margin-top: 25px;
+      }
+      .divider {
+        border: 0;
+        border-top: 1px dashed #25948b;
+        margin: 25px 18px;
+      }
+      .social-links {
+        text-align: center;
+        padding: 10px 0;
+      }
+      .social-links img {
+        width: 24px;
+        height: 24px;
+        margin: 0 5px;
+      }
+      .footer {
+        text-align: center;
+        font-size: 13px;
+        color: #666666;
+        padding: 10px 18px;
+        font-family: "Lucida Sans", sans-serif;
+      }
+      .ps-text {
+        font-size: 14px;
+        color: #555555;
+        margin-top: 15px;
+        padding: 0 18px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="logo">
+        <a href="https://www.balancenutrition.in" target="_blank">
+          <img
+            src="https://www.bncleanse.com/images/emails/balance-nutrition-logo-new.png"
+            alt="Balance Nutrition Logo"
+            width="200"
+          />
+        </a>
+      </div>
+
+      <div class="message">
+        <p>Hello <strong><%= firstName %></strong>,</p>
+        <p>Welcome to Balance Nutrition.</p>
+        <p>
+          We have successfully registered you for the <strong><%= programDuration %>-day <%= programName %> program</strong>. <br />
+          To start your Program & meet your Personal Nutritionist:
+        </p>
+      </div>
+
+      <div class="message">
+          <strong>1. Download & Login</strong><br />
+        Please download the BN App & Login with your registered mobile number & fill out your assessment:<br />
+        <a href="http://www.balancenutrition.in/download-bn-app" class="link">Click here to Download</a>
+    
+        <p>
+          <strong>2. Connect with Client Services</strong><br />
+          Our Client Services Executive will give you a detailed tutorial on the working & app features. Ensure you connect with her:
+        </p>
+        <p>
+          <strong>Book A Call:</strong> <a href="https://www.balancenutrition.in/bn/InductionCallwithCS" class="link">Induction Call Link</a><br />
+          <strong>WhatsApp Her:</strong> <span class="contact">+91 89280 01617</span>
+        </p>
+
+        <div class="signature">
+          Warm Regards,<br />
+          <strong>Team Balance Nutrition</strong>
+        </div>
+      </div>
+
+      <div class="ps-text">
+        <p><em>P.S. Stay Regular & be in touch with your Mentor at all times.</em></p>
+        <p><em>P.P.S. Our work hours are from 10 am to 7 pm & we are closed on Sundays.</em></p>
+      </div>
+
+      <hr class="divider" />
+
+      <div class="social-links">
+        <a href="https://www.facebook.com/balancenutrition.in" target="_blank"><img src="https://www.bncleanse.com/images/emails/facebook_n.png" alt="Facebook" /></a>
+        <a href="https://x.com/khyatirupani_bn" target="_blank"><img src="https://www.bncleanse.com/images/emails/twitter_n.png" alt="Twitter" /></a>
+        <a href="https://in.linkedin.com/company/balance-nutrition-weight-loss-&-more" target="_blank"><img src="https://www.bncleanse.com/images/emails/linkedin_n.png" alt="LinkedIn" /></a>
+        <a href="https://www.youtube.com/channel/UCRBg_eWt2yJreg8AZXPGvKA" target="_blank"><img src="https://www.bncleanse.com/images/emails/youtube_n.png" alt="YouTube" /></a>
+        <a href="https://www.instagram.com/nutritionwithkhyati" target="_blank"><img src="https://www.bncleanse.com/images/emails/instagram_n.png" alt="Instagram" /></a>
+      </div>
+
+      <div class="footer">
+        <p>
+          <strong>Clients In</strong><br />
+          India | UAE | Bahrain | Singapore | USA | UK | Kenya | China & More<br /><br />
+          <em>Copyright © Balance Nutrition, All rights reserved.</em>
+        </p>
+      </div>
+    </div>
+  </body>
+</html>

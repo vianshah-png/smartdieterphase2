@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title><%= callType %> Call Scheduled</title>
+    <style>
+      /* General Styles */
+      body {
+        font-family: Arial, sans-serif;
+        background-color: #f4f4f4;
+        margin: 0;
+        padding: 0;
+      }
+      .email-container {
+        width: 100%;
+        padding: 20px;
+        background-color: #ffffff;
+        border-radius: 8px;
+        margin: 0 0;
+        max-width: 800px;
+      }
+      .header {
+        text-align: left;
+        margin-bottom: 20px;
+      }
+      .header h1 {
+        color: #4caf50;
+        font-size: 24px;
+      }
+      .content {
+        margin-bottom: 20px;
+        text-align: left;
+      }
+      .content p {
+        font-size: 16px;
+        line-height: 1.5;
+      }
+      .content ul {
+        font-size: 16px;
+        line-height: 1.5;
+        padding-left: 20px;
+      }
+      .cta {
+        margin-top: 20px;
+        text-align: center;
+      }
+      .cta a {
+        background-color: #4caf50;
+        color: #ffffff;
+        text-decoration: none;
+        padding: 10px 20px;
+        border-radius: 5px;
+        font-weight: bold;
+      }
+      .footer {
+        font-size: 12px;
+        color: #777;
+        text-align: left;
+        margin-top: 30px;
+      }
+
+      /* Responsive Styles */
+      @media screen and (max-width: 600px) {
+        .email-container {
+          width: 100% !important;
+          padding: 15px;
+        }
+        .header h1 {
+          font-size: 20px;
+        }
+        .content p,
+        .content ul {
+          font-size: 14px;
+        }
+        .cta a {
+          font-size: 14px;
+          padding: 8px 16px;
+        }
+        .footer {
+          font-size: 10px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="email-container">
+      <div class="content">
+        <p>Hello <strong><%= userName %></strong>,</p>
+        <p>
+          Your Consultation call has been scheduled successfully. Please find
+          the details below:
+        </p>
+        <ul>
+          <li><strong>Date:</strong> <%= scheduledDate %></li>
+          <li><strong>Time Slot:</strong> <%= consultTime %> IST</li>
+          <li><strong>Counsellor's Name:</strong> <%= counsellorName %></li>
+        </ul>
+        <p>
+          <%= counsellorName %> shall call you on the above-mentioned date and
+          time on the provided mobile number:
+          <strong><%= userTel %></strong>.
+        </p>
+        <p>
+          Alternatively, you can WhatsApp her at:
+          <a href="https://wa.me/<%= counsellorPhone %>" target="_blank">
+            <%= counsellorPhone %>
+          </a>
+        </p>
+        <p>
+          Also, take a look at the following link to know more about us:
+          <a href="https://youtu.be/yZP7cpCcHSY" target="_blank">Click here </a
+          >.
+        </p>
+      <p>P.S <b>Women Aren&rsquo;t Failing at Health The System Is -&nbsp;</b>Khyati Rupani breaks down why women don&rsquo;t need extreme diets, supplements, or food fads.&nbsp;<a href="https://youtu.be/raenYacbx40?si=VO78qWPFOSfah8yn">Click Here</a> </p>
+      </div>
+      <div class="footer">
+        <p>&copy; <%= year %> Balance Nutrition. All rights reserved.</p>
+      </div>
+    </div>
+  </body>
+</html>

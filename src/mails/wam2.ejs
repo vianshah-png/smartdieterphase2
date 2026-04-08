@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <style>
+      body {
+        font-family: Helvetica, Arial, sans-serif;
+        margin: 0;
+        padding: 0;
+        background-color: #ffffff;
+        color: #202020;
+      }
+      .container {
+        max-width: 600px;
+        margin: 10px auto;
+        background-color: #ffffff;
+        padding: 20px;
+      }
+      .logo {
+        text-align: center;
+        padding: 10px 0;
+      }
+      .message {
+        padding: 0 18px;
+        font-size: 16px;
+        line-height: 150%;
+      }
+      .login-box {
+        background-color: #ccfdff;
+        padding: 18px;
+        margin: 10px 18px;
+        font-family: Verdana, Geneva, sans-serif;
+        line-height: 200%;
+        color: #030303;
+      }
+      .link {
+        color: #1a7e8b;
+        font-weight: bold;
+        text-decoration: none;
+      }
+      .contact {
+        color: #008080;
+        font-weight: bold;
+      }
+      .signature {
+        text-align: right;
+        margin-top: 20px;
+      }
+      .divider {
+        border-top: 1px dashed #25948b;
+        margin: 10px 18px;
+      }
+      .social-links {
+        text-align: center;
+        padding: 10px 0;
+      }
+      .social-links img {
+        width: 120px;
+        height: 40px;
+        margin: 0 5px;
+      }
+      .footer {
+        text-align: center;
+        font-size: 13px;
+        color: #666666;
+        padding: 10px 18px;
+        font-family: "Lucida Sans", sans-serif;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <!-- Logo -->
+      <div class="logo">
+        <a href="https://www.balancenutrition.in" target="_blank">
+          <img
+            src="https://www.bncleanse.com/images/emails/balance-nutrition-logo-new.png"
+            alt="Balance Nutrition Logo"
+            width="200"
+          />
+        </a>
+      </div>
+
+      <!-- Welcome Message with App Link -->
+      <div class="message">
+        <p>Hello <%= name %>,</p>
+        <p>
+          In order to start your program & chat with your personal nutritionist,
+          you will need to download our BN Client Exclusive app from Google Play
+          Store / Apple Store.
+        </p>
+        <p>Please follow these steps to begin:</p>
+        <ol>
+          <li>
+            Download the BN Mobile App (only on phone):
+            <ul>
+              <li>
+                <a
+                  href="https://apps.apple.com/in/app/bn-client-exclusive/id1500756201"
+                  class="link"
+                  target="_blank"
+                  >Click here for iOS</a
+                >
+              </li>
+              <li>
+                <a
+                  href="https://play.google.com/store/apps/details?id=in.clientexclusive.balance"
+                  class="link"
+                  target="_blank"
+                  >Click here for Android</a
+                >
+              </li>
+            </ul>
+          </li>
+          <li>Enter your login details:</li>
+        </ol>
+      </div>
+
+      <!-- Login Details -->
+      <div class="login-box">
+        <strong>Username:</strong> <%= email %><br />
+        <strong>Password:</strong> <%= password %>
+      </div>
+
+      <!-- Contact Info -->
+      <div class="message">
+        <p>
+          P.S - Do read all the important information shared with you there on
+          the screens.
+        </p>
+        <p>
+          *Feel free to get in touch with our client service team at:
+          <a href="tel:8928001617" class="contact">8928001617</a> between 10am &
+          7pm IST in case you are facing any issues with your mobile
+          application.
+        </p>
+        <div class="signature">
+          Warm Regards,<br />
+          <strong>Team Balance Nutrition</strong>
+        </div>
+      </div>
+
+      <!-- Divider -->
+      <hr class="divider" />
+
+      <!-- App Download Buttons -->
+      <div class="social-links">
+        <a
+          href="https://play.google.com/store/apps/details?id=in.clientexclusive.balance"
+          target="_blank"
+        >
+          <img
+            src="https://www.bncleanse.com/EmailFooter/google_icon.png"
+            alt="Get it on Google Play"
+          />
+        </a>
+        <a
+          href="https://apps.apple.com/in/app/bn-client-exclusive/id1500756201"
+          target="_blank"
+        >
+          <img
+            src="https://www.bncleanse.com/EmailFooter/ios_icon.png"
+            alt="Download on the App Store"
+          />
+        </a>
+      </div>
+
+      <!-- Footer -->
+      <div class="footer">
+        <p>
+          <strong>Clients In</strong><br />
+          India | UAE | Bahrain | Singapore | USA | UK | Kenya | China & More<br /><br />
+          <em>Copyright © Balance Nutrition, All rights reserved.</em>
+        </p>
+      </div>
+    </div>
+  </body>
+</html>

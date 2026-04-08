@@ -1,0 +1,742 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+  </head>
+  <body>
+    <div
+      style="
+        max-width: 48rem;
+        margin-left: auto;
+        margin-right: auto;
+        background-color: #ffffff;
+        margin-top: -5rem;
+      "
+    >
+      <!-- Banner -->
+      <div style="position: relative">
+        <img
+          src="https://www.bncleanse.com/images/cleanse/hs_report_banner.png"
+          alt="Where You Stand?"
+          style="width: 100%"
+        />
+      </div>
+
+      <!-- BN Health Score Logo -->
+      <div
+        style="
+          display: flex;
+          justify-content: center;
+          margin-top: 1rem;
+          margin-bottom: 1rem;
+        "
+      >
+        <div style="position: relative">
+          <img
+            src="https://www.bncleanse.com/images/cleanse/hs_logo.png"
+            alt="BN Logo"
+            width="200"
+            height="50"
+            style="position: relative"
+          />
+        </div>
+      </div>
+
+      <!-- Introduction -->
+      <div
+        style="
+          background-color: #f3f4f6;
+          padding: 1rem;
+          margin-left: 1rem;
+          margin-right: 1rem;
+          margin-bottom: 1.5rem;
+        "
+      >
+        <p style="margin-bottom: 0.5rem">
+          Here is an analysis of your weight, health & risk factors.
+        </p>
+        <p style="margin-bottom: 0.5rem">
+          The nutritionists at
+          <span style="font-weight: 700">Balance Nutrition</span>
+          have compiled a report for you with a
+          <span style="font-weight: 700">'Unique Health Score'</span>. Take a
+          look ☺
+        </p>
+      </div>
+
+      <!-- Weight Report Section -->
+      <div style="margin-left: 1rem; margin-right: 1rem; margin-bottom: 1.5rem">
+        <h2
+          style="
+            font-size: 1.125rem;
+            line-height: 1.75rem;
+            font-weight: 700;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+          "
+        >
+          <span style="color: #16a34a; margin-right: 0.5rem">🌱</span> Your
+          Weight Report
+        </h2>
+
+        <div
+          style="margin-bottom: 0.75rem; display: flex; align-items: flex-start"
+        >
+          <span
+            style="
+              width: 0.5rem;
+              height: 0.5rem;
+              background-color: #000000;
+              border-radius: 9999px;
+              margin-top: 0.5rem;
+              margin-right: 0.75rem;
+              flex-shrink: 0;
+            "
+          ></span>
+          <div>
+            As per your inputs, you are
+            <span style="font-weight: 700; <%= weight_color %>"
+              ><%= weight_difference %></span
+            >
+            kg
+            <span
+              style="font-weight: 700; text-transform: uppercase; <%= weight_color %>"
+              ><%= health_category %></span
+            >.
+          </div>
+        </div>
+
+        <div
+          style="margin-bottom: 0.75rem; display: flex; align-items: flex-start"
+        >
+          <span
+            style="
+              width: 0.5rem;
+              height: 0.5rem;
+              background-color: #000000;
+              border-radius: 9999px;
+              margin-top: 0.5rem;
+              margin-right: 0.75rem;
+              flex-shrink: 0;
+            "
+          ></span>
+          <div>
+            Your current weight is:
+            <span style="font-weight: 700"><%= current_weight %></span>
+          </div>
+        </div>
+
+        <div
+          style="margin-bottom: 0.75rem; display: flex; align-items: flex-start"
+        >
+          <span
+            style="
+              width: 0.5rem;
+              height: 0.5rem;
+              background-color: #000000;
+              border-radius: 9999px;
+              margin-top: 0.5rem;
+              margin-right: 0.75rem;
+              flex-shrink: 0;
+            "
+          ></span>
+          <div>
+            Your ideal Body Weight should be:
+            <span style="color: #16a34a; font-weight: 700"
+              ><%= ideal_weight %> kg</span
+            >
+          </div>
+        </div>
+
+        <div style="display: flex; justify-content: center; margin-top: 1rem">
+          <a
+            href="https://api.whatsapp.com/send/?phone=919152419848&text=Hi%2C+I+just+took+the+BN+Health+Score.+My+Name+is&type=phone_number&app_absent=0"
+            target="_blank"
+            style="
+              background-color: #00a0b0;
+              color: #ffffff;
+              padding-left: 1rem;
+              padding-right: 1rem;
+              padding-top: 0.5rem;
+              padding-bottom: 0.5rem;
+              border-radius: 0.375rem;
+              transition-property: background-color;
+              transition-duration: 0.2s;
+              text-decoration: none;
+              display: inline-block;
+            "
+            onmouseover="this.style.backgroundColor='#00848d';"
+            onmouseout="this.style.backgroundColor='#00a0b0';"
+          >
+            WhatsApp Our Expert
+          </a>
+        </div>
+      </div>
+
+      <!-- BMI Report Section -->
+      <div
+        style="
+          margin-left: 1rem;
+          margin-right: 1rem;
+          margin-bottom: 1.5rem;
+          background-color: #e6f9fb;
+          padding: 1rem;
+          border-radius: 0.375rem;
+        "
+      >
+        <h2
+          style="
+            font-size: 1.125rem;
+            line-height: 1.75rem;
+            font-weight: 700;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+          "
+        >
+          <span style="color: #16a34a; margin-right: 0.5rem">🌱</span> Your
+          B.M.I Report
+        </h2>
+
+        <div
+          style="margin-bottom: 0.75rem; display: flex; align-items: flex-start"
+        >
+          <span style="color: #16a34a; font-weight: 700; margin-right: 0.5rem"
+            >✓</span
+          >
+          <div>
+            Your B.M.I is
+            <span style="color: #ef4444; font-weight: 700"><%= bmi %></span>
+            kg/m².
+          </div>
+        </div>
+
+        <div
+          style="margin-bottom: 0.75rem; display: flex; align-items: flex-start"
+        >
+          <span style="color: #16a34a; font-weight: 700; margin-right: 0.5rem"
+            >✓</span
+          >
+          <div>
+            As per your B.M.I, you fall in
+            <span
+              style="font-weight: 700; text-transform: uppercase; <%= weight_color %>"
+              ><%= health_category %></span
+            >
+            Category.
+          </div>
+        </div>
+
+        <div
+          style="
+            display: flex;
+            justify-content: center;
+            margin-top: 1rem;
+            margin-bottom: 0.5rem;
+          "
+        >
+          <a
+            href="/consultation-landing-page"
+            style="
+              background-color: #facc15;
+              color: #000000;
+              font-weight: 700;
+              padding: 0.5rem 1.5rem;
+              border-radius: 0.5rem;
+              text-decoration: none;
+              display: inline-block;
+            "
+            onmouseover="this.style.backgroundColor='#eab308';"
+            onmouseout="this.style.backgroundColor='#facc15';"
+          >
+            Book a Consultation
+          </a>
+        </div>
+
+        <div
+          style="text-align: center; font-size: 0.875rem; line-height: 1.25rem"
+        >
+          <button
+            style="
+              color: #2563eb;
+              background: none;
+              border: none;
+              cursor: pointer;
+              padding: 0;
+            "
+            onmouseover="this.style.textDecoration='underline';"
+            onmouseout="this.style.textDecoration='none';"
+          >
+            *BMI Classification Table
+          </button>
+        </div>
+      </div>
+
+      <!-- Health Score Section -->
+      <div style="margin-left: 1rem; margin-right: 1rem; margin-bottom: 1.5rem">
+        <h2
+          style="
+            font-size: 1.125rem;
+            line-height: 1.75rem;
+            font-weight: 700;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+          "
+        >
+          <span style="color: #16a34a; margin-right: 0.5rem">🌱</span> Your BN
+          Health Score
+        </h2>
+
+        <div
+          style="margin-bottom: 0.75rem; display: flex; align-items: flex-start"
+        >
+          <span
+            style="
+              width: 0.5rem;
+              height: 0.5rem;
+              background-color: #000000;
+              border-radius: 9999px;
+              margin-top: 0.5rem;
+              margin-right: 0.75rem;
+              flex-shrink: 0;
+            "
+          ></span>
+          <div>
+            Based on the above results, your
+            <span style="font-weight: 700">'BN - Health Score'</span> is:
+          </div>
+        </div>
+
+        <div
+          style="
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding-top: 0.5rem;
+            padding-bottom: 0.5rem;
+          "
+        >
+          <div style="text-align: center; margin-right: 2rem">
+            <div
+              style="
+                color: #b08d23;
+                font-size: 4.5rem;
+                line-height: 1;
+                font-weight: 700;
+              "
+            >
+              <%= health_score %>
+            </div>
+            <div
+              style="
+                font-size: 0.875rem;
+                line-height: 1.25rem;
+                font-weight: 700;
+                text-transform: uppercase;
+              "
+            >
+              <%= health_score_category %>
+            </div>
+          </div>
+
+          <div style="position: relative; width: 300px; height: 180px">
+            <div
+              style="
+                position: absolute;
+                left: 50%;
+                transform: translateX(-50%);
+                width: 1.5rem;
+                height: 160px;
+                background-image: linear-gradient(
+                  to bottom,
+                  #16a34a,
+                  #facc15,
+                  #ef4444
+                );
+                border-radius: 0.375rem;
+              "
+            ></div>
+            <div
+              style="
+                position: absolute;
+                left: 50%;
+                transform: translateX(-50%);
+                width: 2.5rem;
+                height: 0.5rem;
+                border-radius: 0.5rem;
+                background-color: #000000;
+                top: <%= calculated_top %>px;
+              "
+            ></div>
+
+            <div
+              style="
+                position: absolute;
+                left: 60%;
+                top: 0;
+                font-size: 0.75rem;
+                line-height: 1rem;
+              "
+            >
+              90-100 : Excellent
+            </div>
+            <div
+              style="
+                position: absolute;
+                left: 60%;
+                top: 20%;
+                font-size: 0.75rem;
+                line-height: 1rem;
+              "
+            >
+              71-89 : Very Good
+            </div>
+            <div
+              style="
+                position: absolute;
+                left: 60%;
+                top: 40%;
+                font-size: 0.75rem;
+                line-height: 1rem;
+              "
+            >
+              51-70 : Can Do Better
+            </div>
+            <div
+              style="
+                position: absolute;
+                left: 60%;
+                top: 60%;
+                font-size: 0.75rem;
+                line-height: 1rem;
+              "
+            >
+              31-50 : Needs Attention
+            </div>
+            <div
+              style="
+                position: absolute;
+                left: 60%;
+                top: 80%;
+                font-size: 0.75rem;
+                line-height: 1rem;
+              "
+            >
+              0-31 : Call Us NOW!
+            </div>
+          </div>
+        </div>
+
+        <div style="display: flex; justify-content: center">
+          <a
+            href="/how-we-work"
+            style="
+              background-color: #00a0b0;
+              color: #ffffff;
+              font-weight: 700;
+              padding: 0.5rem 1.5rem;
+              border-radius: 0.375rem;
+              text-decoration: none;
+              display: inline-block;
+            "
+            onmouseover="this.style.backgroundColor='#008a99';"
+            onmouseout="this.style.backgroundColor='#00a0b0';"
+          >
+            How We Work
+          </a>
+        </div>
+      </div>
+
+      <!-- What Should You Do Now -->
+      <div
+        style="
+          margin-left: 1rem;
+          margin-right: 1rem;
+          margin-bottom: 1.5rem;
+          background-color: #fffde7;
+          padding: 1rem;
+          border-radius: 0.375rem;
+        "
+      >
+        <h2
+          style="
+            font-size: 1.125rem;
+            line-height: 1.75rem;
+            font-weight: 700;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+          "
+        >
+          <span style="color: #16a34a; margin-right: 0.5rem">🌱</span> What
+          Should You Do Now?
+        </h2>
+
+        <div
+          style="margin-bottom: 0.75rem; display: flex; align-items: flex-start"
+        >
+          <span style="color: #16a34a; font-weight: 700; margin-right: 0.5rem"
+            >✓</span
+          >
+          <div>
+            Start with a diet & lifestyle plan. Take a look at
+            <a
+              href="http://www.balancenutrition.in"
+              style="color: #3b82f6; text-decoration: none"
+              >www.balancenutrition.in</a
+            >
+            & check our Programs.
+          </div>
+        </div>
+
+        <div
+          style="margin-bottom: 0.75rem; display: flex; align-items: flex-start"
+        >
+          <span style="color: #16a34a; font-weight: 700; margin-right: 0.5rem"
+            >✓</span
+          >
+          <div>
+            Drink <span style="font-weight: 700">12 glasses</span> of water,
+            limit to 1 tsp.
+            <span style="font-weight: 700">visible sugar</span> a day, 1 fruit &
+            1 raw vegetable.
+          </div>
+        </div>
+
+        <div
+          style="margin-bottom: 0.75rem; display: flex; align-items: flex-start"
+        >
+          <span style="color: #16a34a; font-weight: 700; margin-right: 0.5rem"
+            >✓</span
+          >
+          <div>
+            Speak to our <span style="font-weight: 700">Sr. Counsellor</span> @
+            <a
+              href="tel:9820455544"
+              style="color: #3b82f6; text-decoration: none"
+              >9820455544</a
+            >
+            /
+            <a
+              href="tel:9152419847"
+              style="color: #3b82f6; text-decoration: none"
+              >9152419847</a
+            >.
+          </div>
+        </div>
+      </div>
+
+      <!-- Testimonial Section -->
+      <div style="height: 100%; width: 100%; padding: 2.5rem">
+        <h1
+          style="
+            font-size: 1.5rem;
+            line-height: 2rem;
+            text-align: center;
+            text-decoration: underline;
+          "
+        >
+          🌱They Started & Succeeded
+        </h1>
+        <div
+          style="
+            width: 20rem;
+            height: 20rem;
+            margin-left: auto;
+            margin-right: auto;
+            margin-top: 1rem;
+            margin-bottom: 1rem;
+            padding: 1.25rem;
+          "
+        >
+          <img
+            src="https://bncleanse.com/images/aboutUs/khyati_hs2.png"
+            alt="Testimonial"
+            style="
+              width: 100%;
+              height: 100%;
+              object-fit: cover;
+              border-radius: 0.375rem;
+            "
+          />
+        </div>
+        <div
+          style="
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            gap: 0.5rem;
+          "
+        >
+          <span style="font-size: 1.875rem; line-height: 2.25rem"
+            >Khyati Rupani</span
+          >
+          <span style="font-size: 1.5rem; line-height: 2rem; font-weight: 700"
+            >Lost <b style="color: #16a34a">35</b> Kg</span
+          >
+          <span style="font-weight: 700; font-size: 1.5rem; line-height: 2rem"
+            >India</span
+          >
+          <button
+            style="
+              padding: 0.75rem;
+              font-size: 1rem;
+              line-height: 1.5rem;
+              font-weight: 700;
+              background-color: #000000;
+              color: #ffffff;
+              border-radius: 0.375rem;
+              border: none;
+              cursor: pointer;
+            "
+          >
+            Know more
+          </button>
+        </div>
+      </div>
+
+      <!-- Footer -->
+      <div
+        style="
+          background-color: #00a0b0;
+          color: #ffffff;
+          padding: 1rem;
+          text-align: center;
+        "
+      >
+        <h2 style="font-weight: 700; margin-bottom: 0.5rem">
+          Need Assistance?
+        </h2>
+
+        <p
+          style="
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+          "
+        >
+          📞
+          <a
+            href="tel:+919820455544"
+            style="color: #ffffff; text-decoration: none"
+            onmouseover="this.style.textDecoration='underline';"
+            onmouseout="this.style.textDecoration='none';"
+            >+91 9820455544</a
+          >
+          /
+          <a
+            href="tel:+919152419847"
+            style="color: #ffffff; text-decoration: none"
+            onmouseover="this.style.textDecoration='underline';"
+            onmouseout="this.style.textDecoration='none';"
+            >+91 9152419847</a
+          >
+        </p>
+
+        <div
+          style="
+            display: flex;
+            justify-content: center;
+            gap: 1rem;
+            margin-bottom: 1rem;
+          "
+        >
+          <a
+            href="https://in.linkedin.com/company/balance-nutrition-weight-loss-&-more"
+            target="_blank"
+            style="
+              width: 2rem;
+              height: 2rem;
+              background-color: #ffffff;
+              border-radius: 9999px;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+            "
+            onmouseover="this.style.backgroundColor='#e5e7eb';"
+            onmouseout="this.style.backgroundColor='#ffffff';"
+          >
+            <img
+              src="https://bncleanse.com/images/aboutUs/li_brands.png"
+              alt="LinkedIn"
+              style="display: block; height: 17px !important"
+            />
+          </a>
+          <a
+            href="https://www.instagram.com/balancenutrition.in/"
+            target="_blank"
+            style="
+              width: 2rem;
+              height: 2rem;
+              background-color: #ffffff;
+              border-radius: 9999px;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+            "
+            onmouseover="this.style.backgroundColor='#e5e7eb';"
+            onmouseout="this.style.backgroundColor='#ffffff';"
+          >
+            <img
+              src="https://bncleanse.com/images/aboutUs/instag_brands.png"
+              alt="Instagram"
+              style="display: block; height: 17px !important"
+            />
+          </a>
+          <a
+            href="https://www.youtube.com/channel/UCRBg_eWt2yJreg8AZXPGvKA"
+            target="_blank"
+            style="
+              width: 2rem;
+              height: 2rem;
+              background-color: #ffffff;
+              border-radius: 9999px;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+            "
+            onmouseover="this.style.backgroundColor='#e5e7eb';"
+            onmouseout="this.style.backgroundColor='#ffffff';"
+          >
+            <img
+              src="https://bncleanse.com/images/aboutUs/youtube_brands.png"
+              alt="YouTube"
+              style="display: block; height: 17px !important"
+            />
+          </a>
+        </div>
+
+        <p
+          style="
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+          "
+        >
+          <a
+            href="https://www.balancenutrition.in"
+            target="_blank"
+            style="color: #ffffff; text-decoration: none"
+            onmouseover="this.style.textDecoration='underline';"
+            onmouseout="this.style.textDecoration='none';"
+            >www.balancenutrition.in</a
+          >
+        </p>
+      </div>
+    </div>
+  </body>
+</html>

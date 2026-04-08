@@ -1,0 +1,15 @@
+services:
+  node-final:
+    build: .
+    ports:
+      - "3000:3000"
+    volumes:
+      - .:/app # Sync local code with the container
+      - /app/node_modules # Prevent syncing node_modules to avoid conflicts
+      - ../error_log:/error_log # Mount error log directory
+      - /var/run/docker.sock:/var/run/docker.sock # Allows container to control Docker on the host
+    command: npm run dev
+    restart: on-failure:5
+
+# first time cloning - docker compose -f "docker-compose.yml" up -d --build
+# if container exists docker compose up to run and then to see logs docker-compose logs -f

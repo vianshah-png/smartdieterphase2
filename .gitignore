@@ -1,0 +1,15 @@
+/node_modules
+/.env
+service.json
+/fcmCredential.json
+/driveApiKey.json
+/db_backup.sql
+.DS_Store
+/.github
+src/helper/playground-1.mongodb.js
+uploads/invoices/
+token.json
+*.json
+!package.json
+!package-lock.json
+*.txt

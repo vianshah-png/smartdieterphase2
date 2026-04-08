@@ -1,0 +1,879 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NutriScan AI - Your Health Assistant</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        :root {
+            --primary: #2AB1A1;
+            --primary-dark: #1E8276;
+            --bg-light: #F8FBFA;
+            --text-dark: #1A2E35;
+            --text-muted: #6B7280;
+            --card-shadow: 0 10px 25px rgba(0, 0, 0, 0.05);
+            --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Outfit', sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-light);
+            color: var(--text-dark);
+            height: 100vh;
+            overflow-x: hidden;
+            max-width: 500px;
+            margin: 0 auto;
+            position: relative;
+        }
+
+        .screen {
+            display: none;
+            padding: 20px;
+            animation: fadeIn 0.4s ease-out;
+            height: 100%;
+            overflow-y: auto;
+        }
+
+        .screen.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Home Screen Styles */
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+        }
+
+        .user-profile {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .user-profile img {
+            width: 45px;
+            height: 45px;
+            border-radius: 50%;
+            object-fit: cover;
+        }
+
+        .hero-card {
+            background: linear-gradient(135deg, #2AB1A1, #1E8276);
+            border-radius: 20px;
+            padding: 40px 20px;
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+            box-shadow: 0 15px 30px rgba(42, 177, 161, 0.2);
+        }
+
+        .hero-card img {
+            width: 80px;
+            margin-bottom: 20px;
+        }
+
+        .hero-card h1 {
+            font-size: 24px;
+            margin-bottom: 10px;
+        }
+
+        .hero-card p {
+            font-size: 14px;
+            opacity: 0.9;
+            margin-bottom: 30px;
+        }
+
+        .btn-white {
+            background: white;
+            color: var(--primary);
+            padding: 14px 40px;
+            border-radius: 14px;
+            text-decoration: none;
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            transition: var(--transition);
+        }
+
+        .btn-white:active {
+            transform: scale(0.95);
+        }
+
+        .quick-actions {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 15px;
+            margin-bottom: 40px;
+        }
+
+        .action-item {
+            text-align: center;
+        }
+
+        .action-icon {
+            width: 60px;
+            height: 60px;
+            background: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 10px;
+            color: var(--primary);
+            font-size: 20px;
+            box-shadow: var(--card-shadow);
+        }
+
+        .action-item span {
+            font-size: 12px;
+            color: var(--text-muted);
+        }
+
+        .section-title {
+            font-size: 18px;
+            margin-bottom: 20px;
+            font-weight: 700;
+        }
+
+        .assistant-card {
+            background: white;
+            border-radius: 18px;
+            padding: 20px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 15px;
+            box-shadow: var(--card-shadow);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .assistant-info h3 {
+            font-size: 16px;
+            margin-bottom: 4px;
+        }
+
+        .assistant-info p {
+            font-size: 13px;
+            color: var(--primary);
+            margin-bottom: 12px;
+        }
+
+        .btn-outline {
+            padding: 8px 16px;
+            border-radius: 8px;
+            border: 1px solid #E5E7EB;
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--text-dark);
+            background: transparent;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .assistant-img {
+            width: 70px;
+            height: 70px;
+            border-radius: 12px;
+            object-fit: cover;
+        }
+
+        /* Scanner Screen Styles */
+        .scanner-header {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            right: 20px;
+            z-index: 10;
+            display: flex;
+            justify-content: space-between;
+            color: white;
+        }
+
+        .scanner-bg {
+            background: #000;
+            height: 100vh;
+            padding: 0;
+            overflow: hidden;
+        }
+
+        #video-preview {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .scanner-overlay {
+            position: absolute;
+            inset: 0;
+            background: rgba(0,0,0,0.4);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .scan-frame {
+            width: 80%;
+            aspect-ratio: 1/1.4;
+            border: 4px solid var(--primary);
+            border-radius: 20px;
+            position: relative;
+            box-shadow: 0 0 0 1000px rgba(0,0,0,0.5);
+        }
+
+        .scan-corners::before, .scan-corners::after {
+            content: '';
+            position: absolute;
+            width: 40px;
+            height: 40px;
+            border-color: var(--primary);
+            border-style: solid;
+        }
+
+        .controls {
+            position: absolute;
+            bottom: 40px;
+            left: 0;
+            right: 0;
+            padding: 0 40px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .capture-btn {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            background: white;
+            border: 8px solid rgba(42, 177, 161, 0.3);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--primary);
+            font-size: 30px;
+        }
+
+        .circular-btn {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.2);
+            backdrop-filter: blur(10px);
+            border: none;
+            color: white;
+            font-size: 20px;
+            cursor: pointer;
+        }
+
+        /* Analyzing Screen Styles */
+        .analyzing-screen {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+        }
+
+        .progress-container {
+            position: relative;
+            width: 200px;
+            height: 200px;
+            margin-bottom: 40px;
+        }
+
+        .progress-svg {
+            transform: rotate(-90deg);
+        }
+
+        .progress-bg {
+            fill: none;
+            stroke: #E5E7EB;
+            stroke-width: 10;
+        }
+
+        .progress-bar {
+            fill: none;
+            stroke: var(--primary);
+            stroke-width: 10;
+            stroke-linecap: round;
+            stroke-dasharray: 565;
+            stroke-dashoffset: 565;
+            transition: stroke-dashoffset 1s linear;
+        }
+
+        .progress-text {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 40px;
+            font-weight: 700;
+        }
+
+        .status-list {
+            width: 100%;
+            max-width: 300px;
+            margin: 0 auto;
+            text-align: left;
+        }
+
+        .status-item {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 20px;
+            color: var(--text-muted);
+        }
+
+        .status-item.active {
+            color: var(--text-dark);
+            font-weight: 600;
+        }
+
+        .status-item.done {
+            color: var(--primary);
+        }
+
+        .loader-dot {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            border: 2px solid currentColor;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* Results Screen Styles */
+        .results-header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .score-circle {
+            width: 150px;
+            height: 150px;
+            border-radius: 50%;
+            border: 12px solid var(--primary);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 20px;
+        }
+
+        .score-val {
+            font-size: 48px;
+            font-weight: 700;
+            line-height: 1;
+        }
+
+        .score-label {
+            font-size: 14px;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .result-items {
+            margin-bottom: 30px;
+        }
+
+        .result-item-card {
+            background: white;
+            border-radius: 16px;
+            padding: 15px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 12px;
+            box-shadow: var(--card-shadow);
+        }
+
+        .item-icon {
+            width: 50px;
+            height: 50px;
+            background: #F0FDF4;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--primary);
+        }
+
+        .item-info h4 {
+            font-size: 15px;
+            margin-bottom: 2px;
+        }
+
+        .item-info span {
+            font-size: 12px;
+            color: var(--text-muted);
+        }
+
+        .item-tag {
+            margin-left: auto;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 10px;
+            font-weight: 700;
+            background: #DCFCE7;
+            color: #166534;
+            text-transform: uppercase;
+        }
+
+        .pro-tip {
+            background: #F0FDF4;
+            border-left: 4px solid var(--primary);
+            padding: 20px;
+            border-radius: 0 16px 16px 0;
+            margin-bottom: 30px;
+        }
+
+        .pro-tip h4 {
+            color: var(--primary);
+            margin-bottom: 8px;
+            font-size: 16px;
+        }
+
+        .pro-tip p {
+            font-size: 14px;
+            line-height: 1.6;
+            color: #1A2E35;
+        }
+
+        .navbar {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: white;
+            display: flex;
+            justify-content: space-around;
+            padding: 15px 0;
+            box-shadow: 0 -5px 20px rgba(0,0,0,0.05);
+            max-width: 500px;
+            margin: 0 auto;
+        }
+
+        .nav-item {
+            text-align: center;
+            color: var(--text-muted);
+            font-size: 10px;
+            text-decoration: none;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .nav-item.active {
+            color: var(--primary);
+        }
+
+        .nav-item i {
+            font-size: 20px;
+        }
+
+        /* Responsive */
+        @media (max-width: 400px) {
+            .hero-card { padding: 30px 15px; }
+            .section-title { font-size: 16px; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Home Screen -->
+    <div id="home-screen" class="screen active">
+        <div class="header">
+            <div class="user-profile">
+                <img src="https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=100" alt="User">
+                <div class="user-info">
+                    <p style="font-size: 12px; color: var(--text-muted);">Hi Vian</p>
+                </div>
+            </div>
+            <button class="circular-btn" style="background: transparent; color: var(--text-dark);">
+                <i class="far fa-bell"></i>
+            </button>
+        </div>
+
+        <div class="hero-card">
+            <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='white'%3E%3Cpath d='M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V5h14v14z'/%3E%3Cpath d='M17 12h-4v4h-2v-4H7v-2h4V6h2v4h4v2z'/%3E%3C/svg%3E" alt="NutriScan">
+            <h1>NutriScan AI</h1>
+            <p>Scan your menu or bill for a health check</p>
+            <a href="#" class="btn-white" onclick="showScreen('scanner-screen'); startCamera();">
+                <i class="fas fa-camera"></i> Start Scan
+            </a>
+        </div>
+
+        <div class="quick-actions">
+            <div class="action-item">
+                <div class="action-icon"><i class="far fa-lightbulb"></i></div>
+                <span>Tips</span>
+            </div>
+            <div class="action-item">
+                <div class="action-icon"><i class="fas fa-bullseye"></i></div>
+                <span>Goals</span>
+            </div>
+            <div class="action-item">
+                <div class="action-icon"><i class="fas fa-tint"></i></div>
+                <span>Water</span>
+            </div>
+            <div class="action-item">
+                <div class="action-icon"><i class="fas fa-spa"></i></div>
+                <span>Mind</span>
+            </div>
+        </div>
+
+        <h2 class="section-title">Your Assistants</h2>
+        
+        <div class="assistant-card">
+            <div class="assistant-info">
+                <h3>Clara</h3>
+                <p>Your personal health assistant</p>
+                <button class="btn-outline"><i class="far fa-comment-alt"></i> Chat Now</button>
+            </div>
+            <img src="https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=200" class="assistant-img" alt="Clara">
+        </div>
+
+        <div class="assistant-card">
+            <div class="assistant-info">
+                <h3>Restaurant Guide</h3>
+                <p>Find healthy options nearby</p>
+                <button class="btn-outline"><i class="far fa-compass"></i> Explore</button>
+            </div>
+            <img src="https://images.unsplash.com/photo-1504674900247-0877df9cc836?auto=format&fit=crop&w=200" class="assistant-img" alt="Guide">
+        </div>
+        <div style="height: 100px;"></div>
+    </div>
+
+    <!-- Scanner Screen -->
+    <div id="scanner-screen" class="screen scanner-bg">
+        <div class="scanner-header">
+            <button class="circular-btn" onclick="showScreen('home-screen'); stopCamera();">
+                <i class="fas fa-times"></i>
+            </button>
+            <h2 style="font-size: 18px;">NutriScan</h2>
+            <button class="circular-btn"><i class="fas fa-bolt"></i></button>
+        </div>
+
+        <div class="scanner-overlay">
+            <div style="margin-bottom: 20px; color: white; display: flex; gap: 10px;">
+                <button class="btn-outline" style="border-color: white; color: white; background: var(--primary);">RECEIPT</button>
+                <button class="btn-outline" style="border-color: white; color: white;">MENU</button>
+            </div>
+            
+            <div class="assistant-indicator assistant-card" style="position: absolute; top: 100px; left: 20px; right: 20px; background: rgba(255,255,255,0.9); z-index: 5;">
+                <img src="https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=100" style="width: 40px; height: 40px; border-radius: 50%;" alt="Clara">
+                <div class="assistant-info">
+                    <h3 style="font-size: 14px;">Clara the Carrot</h3>
+                    <p style="font-size: 12px; color: var(--text-muted);">Ensure the bill is well-lit for the best results!</p>
+                </div>
+            </div>
+
+            <div class="scan-frame">
+                <div class="scan-corners"></div>
+            </div>
+
+            <p style="margin-top: 20px; color: rgba(255,255,255,0.7); font-size: 12px; letter-spacing: 1px;">POSITION THE RECEIPT WITHIN THE FRAME</p>
+        </div>
+
+        <video id="video-preview" autoplay playsinline></video>
+
+        <div class="controls">
+            <button class="circular-btn" onclick="triggerFileUpload()"><i class="far fa-image"></i></button>
+            <button class="capture-btn" onclick="captureImage()"><i class="fas fa-camera"></i></button>
+            <button class="circular-btn"><i class="fas fa-history"></i></button>
+        </div>
+        <input type="file" id="file-input" style="display: none;" accept="image/*" onchange="handleFileSelect(event)">
+    </div>
+
+    <!-- Analyzing Screen -->
+    <div id="analyzing-screen" class="screen analyzing-screen">
+        <div class="header" style="position: absolute; top: 20px; left: 20px; right: 20px;">
+            <button class="circular-btn" style="background: transparent; color: var(--text-dark);" onclick="showScreen('scanner-screen')">
+                <i class="fas fa-arrow-left"></i>
+            </button>
+            <h2 style="font-size: 18px;">NutriScan</h2>
+            <div style="width: 50px;"></div>
+        </div>
+
+        <div class="progress-container">
+            <svg class="progress-svg" width="200" height="200">
+                <circle class="progress-bg" cx="100" cy="100" r="90"></circle>
+                <circle id="progress-bar" class="progress-bar" cx="100" cy="100" r="90"></circle>
+            </svg>
+            <div class="progress-text"><span id="progress-val">0</span>%</div>
+        </div>
+
+        <h1 style="margin-bottom: 10px;">Calculating health score...</h1>
+        <p style="color: var(--text-muted); font-size: 14px; margin-bottom: 40px; padding: 0 40px;">Reading items and extracting nutritional data from your scan.</p>
+
+        <div class="status-list">
+            <div class="status-item done" id="status-1">
+                <div class="loader-dot"><i class="fas fa-check"></i></div>
+                <span>Reading items...</span>
+            </div>
+            <div class="status-item active" id="status-2">
+                <div class="loader-dot"><i class="fas fa-circle-notch fa-spin"></i></div>
+                <span>Analyzing nutrition...</span>
+            </div>
+            <div class="status-item" id="status-3">
+                <div class="loader-dot"></div>
+                <span>Calculating health score...</span>
+            </div>
+        </div>
+
+        <button class="btn-outline" style="margin-top: 40px;" onclick="showScreen('home-screen')">Cancel Scan</button>
+        <p style="margin-top: 20px; color: var(--primary); font-size: 12px; font-weight: 700; letter-spacing: 1px;">SCANNING IN PROGRESS</p>
+    </div>
+
+    <!-- Results Screen -->
+    <div id="results-screen" class="screen">
+        <div class="header">
+            <button class="circular-btn" style="background: transparent; color: var(--text-dark);" onclick="showScreen('home-screen')">
+                <i class="fas fa-arrow-left"></i>
+            </button>
+            <h2 style="font-size: 18px;">Scan Result</h2>
+            <button class="circular-btn" style="background: transparent; color: var(--text-dark);">
+                <i class="fas fa-share-alt"></i>
+            </button>
+        </div>
+
+        <div class="results-header">
+            <div class="assistant-card" style="background: white; border-radius: 20px; padding: 30px; flex-direction: column;">
+                <div class="score-circle">
+                    <div class="score-val" id="final-score">85</div>
+                    <div class="score-label">Score</div>
+                </div>
+                <h2 id="final-rating">Excellent Health Score</h2>
+                <p style="color: var(--text-muted); font-size: 14px; margin-top: 10px;" id="final-motivational">This meal matches your dietary goals perfectly.</p>
+            </div>
+        </div>
+
+        <h3 class="section-title" style="color: var(--primary); font-size: 14px;"><i class="fas fa-utensils"></i> SCANNED ITEMS</h3>
+        
+        <div class="result-items" id="result-items-list">
+            <!-- Items will be injected here -->
+        </div>
+
+        <div class="pro-tip">
+            <h4><i class="fas fa-lightbulb"></i> Pro Tip</h4>
+            <p id="final-pro-tip">This combination is excellent for post-workout recovery due to the high protein and natural sugars.</p>
+        </div>
+
+        <button class="btn-white" style="width: 100%; justify-content: center; background: var(--primary); color: white; margin-bottom: 30px;">
+            <i class="fas fa-history"></i> Save to History
+        </button>
+        <div style="height: 100px;"></div>
+    </div>
+
+    <!-- Bottom Navbar -->
+    <nav class="navbar" id="main-nav">
+        <a href="#" class="nav-item active" onclick="showScreen('home-screen')">
+            <i class="fas fa-home"></i>
+            <span>Home</span>
+        </a>
+        <a href="#" class="nav-item">
+            <i class="far fa-comment-dots"></i>
+            <span>Chat</span>
+        </a>
+        <a href="#" class="nav-item">
+            <i class="fas fa-chart-line"></i>
+            <span>Tracker</span>
+        </a>
+        <a href="#" class="nav-item">
+            <i class="fas fa-utensils"></i>
+            <span>Recipes</span>
+        </a>
+        <a href="#" class="nav-item">
+            <i class="far fa-calendar-alt"></i>
+            <span>Wallet</span>
+        </a>
+    </nav>
+
+    <script>
+        let currentStream = null;
+        let capturedImageBlob = null;
+
+        function showScreen(screenId) {
+            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+            document.getElementById(screenId).classList.add('active');
+            
+            // Hide/Show Nav
+            const nav = document.getElementById('main-nav');
+            if (screenId === 'scanner-screen' || screenId === 'analyzing-screen') {
+                nav.style.display = 'none';
+            } else {
+                nav.style.display = 'flex';
+            }
+        }
+
+        async function startCamera() {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ 
+                    video: { facingMode: 'environment' } 
+                });
+                const video = document.getElementById('video-preview');
+                video.srcObject = stream;
+                currentStream = stream;
+            } catch (err) {
+                console.error("Camera error:", err);
+                alert("Could not access camera. Please upload an image instead.");
+            }
+        }
+
+        function stopCamera() {
+            if (currentStream) {
+                currentStream.getTracks().forEach(track => track.stop());
+                currentStream = null;
+            }
+        }
+
+        function triggerFileUpload() {
+            document.getElementById('file-input').click();
+        }
+
+        function handleFileSelect(event) {
+            const file = event.target.files[0];
+            if (file) {
+                processImage(file);
+            }
+        }
+
+        async function captureImage() {
+            const video = document.getElementById('video-preview');
+            const canvas = document.createElement('canvas');
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            canvas.getContext('2d').drawImage(video, 0, 0);
+            
+            canvas.toBlob(blob => {
+                processImage(blob);
+            }, 'image/jpeg');
+            
+            stopCamera();
+        }
+
+        async function processImage(data) {
+            showScreen('analyzing-screen');
+            animateProgress();
+
+            const formData = new FormData();
+            formData.append('image', data);
+            formData.append('user_id', '127054'); // Dummy user ID for testing
+
+            try {
+                const response = await fetch('/api/v1/nutriscan/analyze', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const result = await response.json();
+                if (result.status === 'success') {
+                    renderResults(result.data);
+                } else {
+                    alert("Analysis failed: " + result.message);
+                    showScreen('home-screen');
+                }
+            } catch (err) {
+                console.error("Upload error:", err);
+                alert("Connection failed");
+                showScreen('home-screen');
+            }
+        }
+
+        function animateProgress() {
+            const bar = document.getElementById('progress-bar');
+            const val = document.getElementById('progress-val');
+            let progress = 0;
+            
+            const interval = setInterval(() => {
+                progress += Math.floor(Math.random() * 5) + 1;
+                if (progress >= 95) {
+                    progress = 95;
+                    clearInterval(interval);
+                }
+                updateProgress(progress);
+            }, 500);
+
+            window.stopProgressAnimation = () => {
+                clearInterval(interval);
+                updateProgress(100);
+            };
+        }
+
+        function updateProgress(p) {
+            const bar = document.getElementById('progress-bar');
+            const val = document.getElementById('progress-val');
+            const offset = 565 - (p / 100) * 565;
+            bar.style.strokeDashoffset = offset;
+            val.innerText = p;
+
+            // Update statuses
+            if (p > 30) {
+                document.getElementById('status-1').className = 'status-item done';
+                document.getElementById('status-2').className = 'status-item active';
+            }
+            if (p > 70) {
+                document.getElementById('status-2').className = 'status-item done';
+                document.getElementById('status-3').className = 'status-item active';
+            }
+        }
+
+        function renderResults(data) {
+            if (window.stopProgressAnimation) window.stopProgressAnimation();
+            
+            setTimeout(() => {
+                showScreen('results-screen');
+                document.getElementById('final-score').innerText = data.health_score;
+                document.getElementById('final-rating').innerText = data.rating_label;
+                document.getElementById('final-motivational').innerText = data.motivational_text;
+                document.getElementById('final-pro-tip').innerText = data.pro_tip;
+
+                const list = document.getElementById('result-items-list');
+                list.innerHTML = data.items.map(item => `
+                    <div class="result-item-card">
+                        <div class="item-icon"><i class="fas fa-cookie-bite"></i></div>
+                        <div class="item-info">
+                            <h4>${item.name}</h4>
+                            <span>${item.calories} kcal • ${item.tags.join(', ')}</span>
+                        </div>
+                        <div class="item-tag" style="background: ${getRatingColor(item.rating).bg}; color: ${getRatingColor(item.rating).text}">
+                            ${item.rating}
+                        </div>
+                    </div>
+                `).join('');
+            }, 800);
+        }
+
+        function getRatingColor(rating) {
+            const r = rating.toLowerCase();
+            if (r.includes('excellent') || r.includes('great')) return { bg: '#DCFCE7', text: '#166534' };
+            if (r.includes('good')) return { bg: '#FEF9C3', text: '#854D0E' };
+            return { bg: '#FEE2E2', text: '#991B1B' };
+        }
+    </script>
+</body>
+</html>

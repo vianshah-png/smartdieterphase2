@@ -1,0 +1,822 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>TERMINAL | BN 2.0 Command Center</title>
+  <script src="/socket.io/socket.io.js"></script>
+  <link rel="icon" type="image/png"
+    href="https://res.cloudinary.com/djdtpth4h/image/upload/v1764931615/Frame_2147223935_1_emlss4.png" />
+  <style>
+    :root {
+      --bg: #050505;
+      --card-bg: rgba(22, 22, 26, 0.8);
+      --border: #1fef9555;
+      --accent-green: #00ff88;
+      --accent-red: #ff4d4d;
+      --accent-blue: #20a8d8;
+      --accent-yellow: #f0ad4e;
+      --text-main: #e0e0e0;
+      --glow: rgba(0, 255, 136, 0.1);
+    }
+
+    body {
+      font-family: "Courier New", monospace;
+      background: var(--bg);
+      background-image:
+        linear-gradient(rgba(31, 239, 149, 0.05) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(31, 239, 149, 0.05) 1px, transparent 1px);
+      background-size: 30px 30px;
+      color: var(--text-main);
+      margin: 0;
+      padding: 10px;
+      line-height: 1.4;
+    }
+
+    /* Scanline Effect Overlay */
+    body::after {
+      content: " ";
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(rgba(18, 16, 16, 0) 50%,
+          rgba(0, 0, 0, 0.1) 50%);
+      background-size: 100% 4px;
+      pointer-events: none;
+      z-index: 9999;
+    }
+
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 15px;
+      border: 1px solid var(--border);
+      background: var(--card-bg);
+      backdrop-filter: blur(10px);
+      margin-bottom: 20px;
+      box-shadow: 0 0 15px var(--glow);
+    }
+
+    header h2 {
+      margin: 0;
+      font-size: 1.2rem;
+      letter-spacing: 2px;
+      color: var(--accent-green);
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 15px;
+    }
+
+    @media (min-width: 992px) {
+      .grid {
+        grid-template-columns: 350px 1fr;
+      }
+    }
+
+    .card {
+      background: var(--card-bg);
+      padding: 20px;
+      border: 1px solid var(--border);
+      box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+      backdrop-filter: blur(5px);
+    }
+
+    .card h3 {
+      margin-top: 0;
+      font-size: 0.9rem;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 10px;
+      color: var(--accent-green);
+    }
+
+    .btn-container {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 15px;
+    }
+
+    .btn-restart {
+      flex: 1;
+      padding: 10px;
+      border: 1px solid var(--accent-green);
+      background: transparent;
+      color: var(--accent-green);
+      cursor: pointer;
+      font-weight: bold;
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      transition: 0.3s;
+    }
+
+    .btn-restart:hover {
+      background: var(--accent-green);
+      color: #000;
+      box-shadow: 0 0 10px var(--accent-green);
+    }
+
+    .btn-restart.danger {
+      border-color: var(--accent-red);
+      color: var(--accent-red);
+    }
+
+    .btn-restart.danger:hover {
+      background: var(--accent-red);
+      color: #000;
+      box-shadow: 0 0 10px var(--accent-red);
+    }
+
+    .table-wrapper {
+      width: 100%;
+      overflow-x: auto;
+      background: rgba(0, 0, 0, 0.4);
+      margin-top: 10px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      min-width: 500px;
+      font-size: 0.75rem;
+    }
+
+    th {
+      color: var(--accent-green);
+      text-transform: uppercase;
+      padding: 12px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    td {
+      padding: 10px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    #log-container {
+      height: 200px;
+      overflow-y: auto;
+      background: #000;
+      padding: 10px;
+      font-size: 0.7rem;
+      border: 1px solid var(--border);
+      color: #00ff41;
+      /* Matrix Green */
+    }
+
+    .stats-row {
+      display: flex;
+      justify-content: space-between;
+      margin: 10px 0;
+      font-size: 0.8rem;
+    }
+
+    .stats-row span {
+      color: var(--accent-green);
+      font-weight: bold;
+      text-shadow: 0 0 5px var(--accent-green);
+    }
+
+    #modalQueryText {
+      border-left: 3px solid var(--accent-blue);
+      max-height: 400px;
+      overflow-y: auto;
+      word-break: break-all;
+      /* Prevents long CURL commands from breaking layout */
+    }
+
+    /* Modal Enhancement */
+    #queryModal .card {
+      max-width: 90% !important;
+      border-color: var(--accent-blue);
+    }
+
+    pre {
+      font-size: 0.7rem !important;
+      border-color: var(--accent-blue) !important;
+    }
+  </style>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+
+<body>
+  <header>
+    <div style="
+          display: grid;
+          grid-template-columns: repeat(2, 1fr);
+          place-items: center;
+        ">
+      <h2>BN_API_DASHBOARD_2.0</h2>
+      <div class="btn-container" style="margin-top: 10px;">
+
+        <button class="btn-restart danger" style="width: 80px" onclick="handleLogout()">
+          TERMINATE
+        </button>
+
+      </div>
+  </header>
+
+  <div class="grid">
+    <div class="card">
+      <h3>[ RESOURCE_MONITOR ]</h3>
+      <div id="stats-panel">
+        <div class="stats-row">CPU_LOAD: <span id="cpu-val">--</span></div>
+        <div class="stats-row">MEM_USAGE: <span id="mem-val">--</span></div>
+        <div class="stats-row">
+          DISK_UTIL: <span id="disk-usage-val">--</span>
+        </div>
+        <div class="stats-row">
+          DISK_FREE: <span id="disk-free-val">--</span>
+        </div>
+        <div class="stats-row">SYS_UPTIME: <span id="up-val">--</span></div>
+        <div class="stats-row">
+          SQL_SLOW_LOG: <span id="slow-log-status" style="color: var(--accent-red)">OFF</span>
+        </div>
+        <div class="stats-row">
+          LAST_REBOOT:
+          <span id="restart-val" style="color: var(--accent-blue)">--</span>
+        </div>
+      </div>
+      <div class="btn-container">
+        <button class="btn-restart danger" onclick="restartContainer()">
+          Hard Restart
+        </button>
+        <button class="btn-restart" onclick="clearApiLogs()">
+          Purge Logs
+        </button>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>[ LIVE_UPLINK_TRAFFIC ]</h3>
+      <div id="log-container"></div>
+    </div>
+  </div>
+
+  <div class="card" style="grid-column: 1 / -1">
+    <h3>[ NETWORK_LATENCY_UPLINK ]</h3>
+    <div style="height: 150px; position: relative">
+      <canvas id="latencyChart"></canvas>
+    </div>
+  </div>
+
+  <div class="card" style="margin-top: 20px">
+    <div style="
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          flex-wrap: wrap;
+          gap: 10px;
+        ">
+      <h3>[ SLOW_QUERY_ANALYSIS ]</h3>
+      <div class="btn-container" style="margin: 0">
+        <button class="btn-restart" style="
+              color: var(--accent-yellow);
+              border-color: var(--accent-yellow);
+            " onclick="clearSlowLogs()">
+          Wipe History
+        </button>
+
+        <button class="btn-restart" style="color: var(--accent-blue); border-color: var(--accent-blue)"
+          onclick="window.location.href = '/api/v1/admin/export-slow-sql'">
+          Export_XLS
+        </button>
+      </div>
+    </div>
+    <div class="table-wrapper">
+      <table id="slow-query-table">
+        <thead>
+          <tr>
+            <th>TIMESTAMP</th>
+            <th>EXEC_TIME</th>
+            <th>SNIPPET</th>
+            <th>ACTIONS</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+      <div class="btn-container" style="justify-content: center; margin-top: 10px">
+        <button class="btn-restart" id="prev-sql" onclick="changeSqlPage(-1)" style="max-width: 80px">
+          PREV
+        </button>
+        <span id="sql-page-info" style="
+              font-size: 0.8rem;
+              color: var(--accent-green);
+              align-self: center;
+              margin: 0 15px;
+            ">PAGE: 1</span>
+        <button class="btn-restart" id="next-sql" onclick="changeSqlPage(1)" style="max-width: 80px">
+          NEXT
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div style="
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          flex-wrap: wrap;
+          gap: 10px;
+        ">
+      <h3>[ PERSISTENT_DATA_LOGS ]</h3>
+      <div style="display: flex; align-items: center; gap: 10px">
+        <label style="font-size: 0.6rem; color: var(--accent-green)">
+          <input type="checkbox" id="slow-only-toggle" onchange="fetchMongoLogs()" />
+          SLOW_ONLY
+        </label>
+        <button class="btn-restart" onclick="fetchMongoLogs()">Sync</button>
+        <button class="btn-restart" style="color: var(--accent-blue); border-color: var(--accent-blue)"
+          onclick="window.location.href = '/api/v1/admin/export-mongo-logs'">
+          Export_XLS
+        </button>
+        <button class="btn-restart danger" onclick="clearMongoLogs()">
+          Wipe History
+        </button>
+      </div>
+    </div>
+    <div class="table-wrapper">
+      <table id="mongo-log-table">
+        <thead>
+          <tr>
+            <th>TIME</th>
+            <th>VERB</th>
+            <th>ENDPOINT</th>
+            <th>STATUS</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+      <div class="btn-container" style="justify-content: center; margin-top: 10px">
+        <button class="btn-restart" id="prev-mongo" onclick="changeMongoPage(-1)" style="max-width: 80px">
+          PREV
+        </button>
+        <span id="mongo-page-info" style="
+              font-size: 0.8rem;
+              color: var(--accent-blue);
+              align-self: center;
+              margin: 0 15px;
+            ">PAGE: 1</span>
+        <button class="btn-restart" id="next-mongo" onclick="changeMongoPage(1)" style="max-width: 80px">
+          NEXT
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div id="queryModal" style="
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.95);
+        z-index: 10000;
+        justify-content: center;
+        align-items: center;
+        padding: 10px;
+      ">
+    <div class="card" style="width: 100%; max-height: 90vh; overflow-y: auto">
+      <h3 id="modalTitle" style="color: var(--accent-blue)">QUERY_DETAILS</h3>
+      <div id="suggestionBox" style="
+            display: none;
+            background: rgba(240, 173, 78, 0.1);
+            border: 1px solid var(--accent-yellow);
+            padding: 10px;
+            margin-bottom: 15px;
+            font-size: 0.75rem;
+          ">
+        <p id="suggestionText" style="color: var(--accent-yellow); margin: 0; font-weight: bold"></p>
+        <button onclick="copyToClipboard('suggestionText')" style="
+              background: none;
+              border: none;
+              color: var(--text-dim);
+              cursor: pointer;
+              font-size: 0.6rem;
+              text-decoration: underline;
+              padding-top: 5px;
+            ">
+          [ COPY_FIX ]
+        </button>
+      </div>
+      <pre id="modalQueryText" style="
+            white-space: pre-wrap;
+            background: #000;
+            padding: 15px;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 0.75rem;
+            color: #00ff41;
+            border: 1px solid var(--border);
+          "></pre>
+      <div class="btn-container">
+        <button class="btn-restart" onclick="copyToClipboard('modalQueryText')">
+          Copy SQL
+        </button>
+        <button class="btn-restart" onclick="closeModal()">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const socket = io();
+    const logContainer = document.getElementById("log-container");
+    socket.on("api-batch", (data) => {
+      data.logs.forEach(log => {
+        const entry = document.createElement("div");
+
+        // Match the 2000ms threshold from your middleware
+        const isSlow = log.duration >= 2000;
+        entry.style.color = isSlow ? "var(--accent-red)" : "#00ff41";
+        entry.style.marginBottom = "6px";
+        entry.style.borderLeft = `2px solid ${isSlow ? "var(--accent-red)" : "var(--accent-green)"}`;
+        entry.style.paddingLeft = "8px";
+
+        entry.innerHTML = `> [${data.timestamp}] ${log.method} ${log.url} | ${log.duration}ms [${log.status}]`;
+
+        logContainer.prepend(entry);
+      });
+
+      while (logContainer.childNodes.length > 100) {
+        logContainer.lastChild.remove();
+      }
+    });
+    const ctx = document.getElementById("latencyChart").getContext("2d");
+    const latencyChart = new Chart(ctx, {
+      type: "line",
+      data: {
+        labels: Array(20).fill(""),
+        datasets: [
+          {
+            label: "Ping (ms)",
+            data: Array(20).fill(0),
+            borderColor: "#00ff88",
+            borderWidth: 2,
+            pointRadius: 0,
+            fill: true,
+            backgroundColor: "rgba(0, 255, 136, 0.1)",
+            tension: 0.4,
+          },
+        ],
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+          y: {
+            beginAtZero: true,
+            grid: { color: "#1fef9522" },
+            ticks: { color: "#00ff88", font: { size: 10 } },
+          },
+          x: { display: false },
+        },
+        plugins: { legend: { display: false } },
+      },
+    });
+
+    async function updateStats() {
+      try {
+        const res = await fetch("/api/v1/admin/server-resources");
+        const r = await res.json(); // Define 'r' first!
+
+        if (r.success) {
+          // Update Slow Log Status
+          const slowLogSpan = document.getElementById("slow-log-status");
+          if (slowLogSpan) {
+            slowLogSpan.innerText = r.data.slowLogStatus || "OFF";
+            slowLogSpan.style.color = r.data.slowLogStatus === "ON" ? "var(--accent-green)" : "var(--accent-red)";
+          }
+          // Update other resource metrics
+          document.getElementById("cpu-val").innerText = r.data.cpu;
+          document.getElementById("mem-val").innerText = r.data.memory;
+          const diskUsageSpan = document.getElementById("disk-usage-val");
+          diskUsageSpan.innerText = r.data.diskUsage;
+          diskUsageSpan.style.color = parseFloat(r.data.diskUsage) > 85 ? "var(--accent-red)" : "var(--accent-green)";
+          document.getElementById("disk-free-val").innerText = r.data.diskFreeGB;
+          document.getElementById("up-val").innerText = r.data.uptime;
+          document.getElementById("restart-val").innerText = r.data.lastRestart;
+        }
+      } catch (e) {
+        console.error("Stats Error", e);
+      }
+    }
+    let currentSqlPage = 1;
+
+    async function fetchSlowQueries() {
+      try {
+        const res = await fetch(
+          `/api/v1/admin/slow-queries?page=${currentSqlPage}`,
+        );
+        const r = await res.json();
+        const tbody = document.querySelector("#slow-query-table tbody");
+
+        if (r.success) {
+          document.getElementById("sql-page-info").innerText =
+            `PAGE: ${r.pagination.page} / ${r.pagination.pages}`;
+
+          // Disable buttons if at start or end
+          document.getElementById("prev-sql").disabled =
+            r.pagination.page === 1;
+          document.getElementById("next-sql").disabled =
+            r.pagination.page >= r.pagination.pages;
+
+          tbody.innerHTML = r.data
+            .map((q) => {
+              const safeSql = btoa(q.sql_text);
+              return `
+                    <tr>
+                        <td>${new Date(q.start_time).toLocaleTimeString("en-IN")}</td>
+                        <td style="color:var(--accent-yellow)">${q.query_time}s</td>
+                        <td><code>${q.sql_text.substring(0, 30)}...</code></td>
+                        <td>
+                            <div style="display:flex; gap:5px;">
+                                <button class="btn-restart" style="padding:4px; font-size:0.6rem" onclick="viewFullQuery('${safeSql}')">VIEW</button>
+                                <button class="btn-restart" style="padding:4px; font-size:0.6rem; border-color:var(--accent-blue); color:var(--accent-blue)" onclick="analyzeSQL('${safeSql}')">INDEX</button>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            })
+            .join("");
+        }
+      } catch (e) {
+        console.error("Pagination Error:", e);
+      }
+    }
+
+    function changeSqlPage(step) {
+      currentSqlPage += step;
+      fetchSlowQueries();
+    }
+    async function analyzeSQL(encodedSql) {
+      const sql = atob(encodedSql); // Decode from Base64
+      const status = document.getElementById("status"); // Reference to your status footer
+
+      try {
+        // UI Feedback
+        if (status) status.innerText = "RUNNING_QUERY_EXPLAIN...";
+
+        const res = await fetch("/api/v1/admin/explain-query", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ sql }),
+        });
+
+        const result = await res.json();
+
+        if (result.success) {
+          document.getElementById("modalTitle").innerText =
+            "EXECUTION_PLAN_ANALYSIS";
+          document.getElementById("suggestionBox").style.display = "block";
+          document.getElementById("suggestionText").innerText =
+            result.suggestion;
+
+          // Format the EXPLAIN JSON for the terminal view
+          const planTable = JSON.stringify(result.details, null, 2);
+          document.getElementById("modalQueryText").innerText =
+            `[ORIGINAL_SQL]\n${sql}\n\n[MARIADB_EXPLAIN_PLAN]\n${planTable}`;
+
+          document.getElementById("queryModal").style.display = "flex";
+          if (status) status.innerText = "ANALYSIS_COMPLETE";
+        } else {
+          alert("ANALYSIS_FAILED: CHECK_SQL_SYNTAX");
+        }
+      } catch (e) {
+        console.error("Index Check Error", e);
+        alert("UPLINK_FAILURE: CANNOT_CONNECT_TO_DB_ENGINE");
+      }
+    }
+    let currentMongoPage = 1;
+
+    async function fetchMongoLogs() {
+      try {
+        const isSlow = document.getElementById("slow-only-toggle").checked;
+        const res = await fetch(
+          `/api/v1/admin/mongo-logs?page=${currentMongoPage}&slowOnly=${isSlow}`,
+        );
+        const r = await res.json();
+        const tbody = document.querySelector("#mongo-log-table tbody");
+
+        if (r.success) {
+          document.getElementById("mongo-page-info").innerText =
+            `PAGE: ${r.pagination.page} / ${r.pagination.pages}`;
+
+          document.getElementById("prev-mongo").disabled = r.pagination.page === 1;
+          document.getElementById("next-mongo").disabled = r.pagination.page >= r.pagination.pages;
+
+          tbody.innerHTML = r.data
+            .map((l) => {
+              // Base64 encode the CURL to prevent breaking HTML attributes
+              const safeCurl = l.curl ? btoa(l.curl) : "";
+
+              return `
+            <tr>
+              <td style="font-family:monospace; color:var(--text-dim)">
+                ${new Date(l.createdAt).toLocaleTimeString("en-IN")}
+              </td>
+              <td style="color:var(--accent-blue)">${l.method}</td>
+              <td><code>${l.url.substring(0, 30)}...</code></td>
+              <td style="color:${l.status >= 400 ? "var(--accent-red)" : "var(--accent-green)"}">
+                ${l.status} ${l.duration >= 2000 ? "⚠️" : ""}
+                ${l.curl ? `
+                  <button class="btn-restart" 
+                          style="padding:2px 6px; font-size:0.6rem; margin-left:8px; border-color:var(--accent-blue); color:var(--accent-blue)" 
+                          onclick="viewCurl('${safeCurl}')">
+                    CURL
+                  </button>` : ''}
+              </td>
+            </tr>
+          `;
+            })
+            .join("");
+        }
+      } catch (e) {
+        console.error("Mongo Pagination Error:", e);
+      }
+    }
+
+    function viewCurl(encodedCurl) {
+      if (!encodedCurl) return alert("NO_CURL_DATA_AVAILABLE");
+
+      try {
+        const curl = atob(encodedCurl); // Decode Base64
+
+        // Update Modal Content
+        document.getElementById("modalTitle").innerText = "REPRODUCE_VIA_CURL";
+        document.getElementById("suggestionBox").style.display = "none";
+        document.getElementById("modalQueryText").innerText = curl;
+
+        // Display Modal
+        document.getElementById("queryModal").style.display = "flex";
+      } catch (e) {
+        console.error("CURL Decode Error:", e);
+        alert("HEX_DECODE_FAILURE");
+      }
+    }
+
+    function changeMongoPage(step) {
+      currentMongoPage += step;
+      fetchMongoLogs();
+    }
+
+    // Ensure the "Slow Only" toggle resets the page to 1
+    document
+      .getElementById("slow-only-toggle")
+      .addEventListener("change", () => {
+        currentMongoPage = 1;
+        fetchMongoLogs();
+      });
+    // Logic for Modal, Logout, and Cleanups
+    function viewFullQuery(encodedSql) {
+      document.getElementById("modalQueryText").innerText = atob(encodedSql);
+      document.getElementById("suggestionBox").style.display = "none";
+      document.getElementById("queryModal").style.display = "flex";
+    }
+
+    function closeModal() {
+      document.getElementById("queryModal").style.display = "none";
+    }
+
+    function handleLogout() {
+      if (confirm("TERMINATE_SESSION?"))
+        window.location.href = "/api/v1/admin/logout";
+    }
+
+    async function clearMongoLogs() {
+      if (confirm("PURGE_MONGODB_DATA?")) {
+        await fetch("/api/v1/admin/truncate-mongo-logs", { method: "POST" });
+        fetchMongoLogs();
+      }
+    }
+
+
+    // Function to Purge MariaDB api_logs
+    async function clearSlowLogs() {
+      if (confirm("RECONFIRM: ERASE ALL MARIA_DB_SLOW_QUERY_HISTORY?")) {
+        try {
+          const res = await fetch("/api/v1/admin/truncate-slow-logs", {
+            method: "POST",
+          });
+          const result = await res.json();
+
+          if (result.success) {
+            alert("SYSTEM_REPLY: SLOW_LOGS_ERASED");
+            fetchSlowQueries(); // Refresh the table to show it's empty
+          } else {
+            alert("ACCESS_ERROR: " + result.error);
+          }
+        } catch (e) {
+          console.error("Purge Error:", e);
+          alert("UPLINK_FAILURE: DATABASE_CONNECTION_TIMED_OUT");
+        }
+      }
+    }
+    async function clearApiLogs() {
+      if (
+        confirm(
+          "CRITICAL: PROCEED WITH API_LOG_PURGE? DATA WILL BE IRRECOVERABLE.",
+        )
+      ) {
+        try {
+          // UI Feedback
+          const btn = event.target;
+          const originalText = btn.innerText;
+          btn.innerText = "PURGING...";
+
+          const res = await fetch("/api/v1/admin/truncate-api-logs", {
+            method: "POST",
+          });
+          const result = await res.json();
+
+          if (result.success) {
+            alert("SYSTEM_REPLY: API_LOGS_PURGED_SUCCESSFULLY");
+            // Clear the live traffic terminal immediately
+            document.getElementById("log-container").innerHTML =
+              "> [SYSTEM] LOG_CACHE_CLEARED_BY_ADMIN";
+          } else {
+            alert("ACCESS_ERROR: " + result.error);
+          }
+          btn.innerText = originalText;
+        } catch (e) {
+          console.error("Purge Error:", e);
+          alert("UPLINK_FAILURE: CANNOT_REACH_DATABASE");
+        }
+      }
+    }
+
+    async function restartContainer() {
+      // 1. Initial warning
+      if (!confirm("🚨 WARNING: This will take the API offline. Proceed?")) return;
+
+      // 2. Security Code Challenge
+      const code = prompt("ENTER_RESTART_SECURITY_CODE:");
+
+      if (code) {
+        try {
+          const res = await fetch("/api/v1/admin/restart-docker", {
+            method: "POST",
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ security_code: code })
+          });
+
+          const result = await res.json();
+
+          if (result.success) {
+            alert(result.message);
+          } else {
+            alert(result.message); // Will show "INVALID_SECURITY_CODE"
+          }
+        } catch (e) {
+          alert("UPLINK_LOST: Server is likely restarting...");
+        }
+      }
+    }
+    function copyToClipboard(id) {
+      navigator.clipboard.writeText(document.getElementById(id).innerText);
+      alert("HEX_DATA_COPIED");
+    }
+
+    // Function to measure latency
+    async function measureLatency() {
+      const start = Date.now();
+      try {
+        await fetch("/api/v1/admin/server-resources"); // Ping existing endpoint
+        const end = Date.now();
+        const ping = end - start;
+
+        // Update Chart
+        latencyChart.data.datasets[0].data.shift();
+        latencyChart.data.datasets[0].data.push(ping);
+        latencyChart.update("none"); // Update without animation for performance
+      } catch (e) {
+        console.error("Ping Failed");
+      }
+    }
+
+    // Call measureLatency every 3 seconds
+    setInterval(measureLatency, 3000);
+
+    setInterval(() => {
+      updateStats();
+      fetchSlowQueries();
+      fetchMongoLogs();
+    }, 15000);
+    window.onload = () => {
+      updateStats();
+      fetchSlowQueries();
+      fetchMongoLogs();
+    };
+  </script>
+</body>
+
+</html>

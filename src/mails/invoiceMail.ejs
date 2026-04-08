@@ -1,0 +1,376 @@
+<table width="100%" style="border: 1px solid #d7d7d7; padding: 10px">
+  <tr>
+    <td>
+      <table width="100%" style="border: 1px solid #707070; padding: 20px 25px">
+        <tr>
+          <td>
+            <table width="100%">
+              <tr>
+                <td style="text-align: center">
+                  <span
+                    style="font-size: 36px; color: #2a2f5a; font-weight: normal"
+                    ><u>Invoice</u></span
+                  >
+                </td>
+              </tr>
+              <tr>
+                <td height="20">&nbsp;</td>
+              </tr>
+              <tr>
+                <td>
+                  <table width="100%">
+                    <tr>
+                      <!-- FROM (Balance Nutrition) -->
+                      <td
+                        width="390"
+                        style="
+                          vertical-align: top;
+                          font-size: 12px;
+                          padding: 10px 0;
+                        "
+                      >
+                        <span
+                          style="
+                            width: 100px;
+                            padding: 5px;
+                            background: #30b0bd;
+                            display: block;
+                            margin: 0 0 5px;
+                            text-align: center;
+                          "
+                        >
+                          <img
+                            src="https://www.bncleanse.com/images/home_page/bn_logo_300.png"
+                            width="100"
+                          />
+                        </span>
+                        <span style="line-height: 1.4; color: #2a2f5a"
+                          ><b>Address :</b> Balance Nutrition Privy Center, Sai
+                          Mansarovar Building, 1st Floor, S.V. Road, Above HP
+                          World Showroom, Santacruz West, Mumbai - 400054</span
+                        ><br />
+                        <span><b>GSTN :</b> 27AAPFB7150F1ZD</span><br />
+                        <span><b>Contact No. :</b> +91 9820792855</span><br />
+                        <span><b>Email :</b> info@balancenutrition.in</span
+                        ><br />
+                        <span
+                          ><b>Website :</b>
+                          <a href="https://www.balancenutrition.in"
+                            >www.balancenutrition.in</a
+                          ></span
+                        >
+                      </td>
+
+                      <!-- Divider -->
+                      <td width="20" align="center" style="vertical-align: top">
+                        <span
+                          style="
+                            width: 1px;
+                            height: 200px;
+                            border-left: 1px solid #49b0bf;
+                            display: block;
+                          "
+                        ></span>
+                      </td>
+
+                      <!-- TO (Client Info) -->
+                      <td
+                        width="390"
+                        style="
+                          vertical-align: top;
+                          font-size: 12px;
+                          padding: 15px 0 0 20px;
+                        "
+                      >
+                        <h4 style="color: #2a2f5a; font-size: 16px">
+                          INVOICE TO :
+                        </h4>
+                        <span><b>Name :</b> <%= name %></span><br />
+                        <% if (companyName && companyName.trim() !== "") { %>
+                        <span><b>Company Name :</b> <%= companyName %></span
+                        ><br />
+                        <% } %>
+                        <span><b>Address :</b> <%= address %></span><br />
+                        <span><b>GSTN :</b> <%= gstn %></span><br />
+                        <span><b>Contact No. :</b> <%= contact %></span><br />
+                        <span><b>Email :</b> <%= email %></span><br />
+                        <span><b>Order Date :</b> <%= orderDate %></span><br />
+                        <span><b>Invoice No. :</b> <%= invoiceNo %></span>
+                      </td>
+                    </tr>
+                  </table>
+                </td>
+              </tr>
+
+              <tr>
+                <td height="30">&nbsp;</td>
+              </tr>
+              <tr>
+                <td><hr style="border-top: 1px solid #49b0bf" /></td>
+              </tr>
+              <tr>
+                <td height="30">&nbsp;</td>
+              </tr>
+
+              <!-- Program Details -->
+              <tr>
+                <td align="center">
+                  <span
+                    style="
+                      font-weight: 600;
+                      color: #2b2e5b;
+                      padding-bottom: 10px;
+                      font-size: 20px;
+                    "
+                    >Payment Details</span
+                  ><br />
+                  <span style="font-weight: 600; font-size: 16px"
+                    ><%= programName %> <%= programDuration %></span
+                  ><br />
+                  <span style="font-size: 16px"
+                    >(HSN/SAC : <%= hsnCode %>)</span
+                  >
+                </td>
+              </tr>
+              <tr>
+                <td height="30">&nbsp;</td>
+              </tr>
+
+              <!-- Pricing Breakdown -->
+              <tr>
+                <td>
+                  <table width="100%" style="border-top: 1px solid #e2e2e2">
+                    <tr>
+                      <td>Program Cost (MRP) :</td>
+                      <td align="right">₹ <%= mrp %></td>
+                    </tr>
+                  </table>
+                  <table width="100%" style="border-top: 1px solid #e2e2e2">
+                    <tr>
+                      <td>Existing Discount :</td>
+                      <td align="right">₹ <%= existingDiscount %></td>
+                    </tr>
+                  </table>
+                  <% if (couponDiscount > 0) { %>
+                  <table width="100%" style="border-top: 1px solid #e2e2e2">
+                    <tr>
+                      <td>E-Coupon Discount :</td>
+                      <td align="right">₹ <%= couponDiscount %></td>
+                    </tr>
+                  </table>
+                  <% } %>
+
+                  <!-- Wallet Discount (only show if walletDiscount > 0) -->
+                  <% if (walletDiscount > 0) { %>
+                  <table width="100%" style="border-top: 1px solid #e2e2e2">
+                    <tr>
+                      <td>Wallet Discount :</td>
+                      <td align="right">₹ <%= walletDiscount %></td>
+                    </tr>
+                  </table>
+                  <% } %> <% if (cgst > 0) { %>
+                  <table width="100%" style="border-top: 1px solid #e2e2e2">
+                    <tr>
+                      <td>CGST (2.5%) :</td>
+                      <td align="right">₹ <%= cgst %></td>
+                    </tr>
+                  </table>
+                  <% } %> <% if (sgst > 0) { %>
+                  <table width="100%" style="border-top: 1px solid #e2e2e2">
+                    <tr>
+                      <td>SGST (2.5%) :</td>
+                      <td align="right">₹ <%= sgst %></td>
+                    </tr>
+                  </table>
+                  <% } %>
+
+                  <table width="100%" style="border-top: 1px solid #e2e2e2">
+                    <tr>
+                      <td style="font-size: 16px; font-weight: 600">
+                        Grand Total :
+                      </td>
+                      <td
+                        align="right"
+                        style="font-size: 16px; font-weight: 600"
+                      >
+                        ₹ <%= totalAmount %>
+                      </td>
+                    </tr>
+                  </table>
+                  <table width="100%" style="border-top: 1px solid #e2e2e2">
+                    <tr>
+                      <td>Paid :</td>
+                      <td align="right">₹ <%= paidAmount %></td>
+                    </tr>
+                  </table>
+                  <% if (balanceAmount > 0) { %>
+                  <table width="100%" style="border-top: 1px solid #e2e2e2">
+                    <tr>
+                      <td><b>Balance Amount :</b></td>
+                      <td align="right"><b>₹ <%= balanceAmount %></b></td>
+                    </tr>
+                  </table>
+                  <% } %>
+
+                  <table width="100%" style="border-top: 1px solid #e2e2e2">
+                    <tr>
+                      <td>
+                        <b style="color: #000"
+                          >Amount Paid <small>(in words)</small> :</b
+                        >
+                        <%= amountInWords %>
+                      </td>
+                    </tr>
+                  </table>
+                </td>
+              </tr>
+
+              <tr>
+                <td height="30">&nbsp;</td>
+              </tr>
+              <tr>
+                <td
+                  align="right"
+                  style="
+                    font-size: 20px;
+                    text-decoration: underline;
+                    color: #2c2d5d;
+                  "
+                >
+                  <b>For Balance Nutrition</b>
+                </td>
+              </tr>
+              <tr>
+                <td align="right">
+                  <img
+                    src="https://www.bncleanse.com/images/signature_ac.png?cache=4"
+                    alt="Signature"
+                  />
+                </td>
+              </tr>
+              <tr>
+                <td height="40">&nbsp;</td>
+              </tr>
+
+              <tr>
+                <td><hr style="border-top: 1px solid #49b0bf" /></td>
+              </tr>
+              <tr>
+                <td height="10">&nbsp;</td>
+              </tr>
+
+              <!-- Terms -->
+              <tr>
+                <td>
+                  <span style="font-weight: 600; font-size: 12px"
+                    >*TERMS AND CONDITIONS:</span
+                  >
+                  <ol
+                    style="
+                      font-size: 10px;
+                      padding-left: 20px;
+                      line-height: 1.4;
+                    "
+                  >
+                    <li>
+                      You are duty-bound to disclose correct and accurate
+                      information with M/s Balance Nutrition at the time of
+                      enrollment, after your program session/s, and as and when
+                      required. Your programs/diet sessions are designed on the
+                      basis of information shared by you (Name, age, address,
+                      email id, mobile number, gender, height, body
+                      measurements, country of residence, medical condition/s,
+                      menstruation cycle (for female clients), sleeping pattern,
+                      smoking habits, alcohol consumption pattern, daily
+                      activity levels, water intake, eating habits, allergies
+                      (if any), progress made and challenges faced in the last
+                      program/diet session, etc.)
+                    </li>
+                    <li>
+                      All our diet sessions / program sessions are tailor made
+                      keeping in mind the above information shared by you and
+                      hence all your diet plans/sessions cannot be sent to you
+                      together. M/s Balance Nutrition shall not entertain any
+                      requests for sending all the diet sessions / program
+                      sessions together.
+                    </li>
+                    <li>
+                      Information shared by M/s Balance Nutrition with you is
+                      for guidance purposes only. We at M/s Balance Nutrition do
+                      not guarantee any weight loss as the same depends on
+                      multiple factors. Information shared by M/s Balance
+                      Nutrition should not be construed as medical advice or
+                      diagnosis. You are expected to have consulted your general
+                      physician before enrolling and starting a program with M/s
+                      Balance Nutrition.
+                    </li>
+                    <li>
+                      You have already been asked to read the Terms of Use and
+                      Privacy Policies section mentioned on the website
+                      <a href="https://www.balancenutrition.in" target="_blank"
+                        >www.balancenutrition.in</a
+                      >
+                      and our Mobile Application – Balance Nutrition (iOS and
+                      Android) by our team as the same shall enable you to
+                      understand the scope of services, validity of programs,
+                      rewards/loyalty points, BN - Wallet, and all other terms
+                      and conditions which are applicable to you as long as you
+                      subscribe for our service and continue our programs.
+                    </li>
+                    <li>
+                      Fees paid to M/s Balance Nutrition are non-refundable
+                      under all circumstances and the programs cannot be
+                      transferred to any other person/user. No refund or
+                      transfer requests shall be entertained by M/s Balance
+                      Nutrition even if the services paid for are not utilized
+                      for whatsoever reasons.
+                    </li>
+                    <li>
+                      You are required to pay the program fees /charges for the
+                      subscribed services on time and as per the payment
+                      schedule informed by M/s Balance Nutrition at the time of
+                      enrollment. M/s Balance Nutrition reserves a right to
+                      block your access to the website, mobile application, BN
+                      Wallet if the information provided by you is found to be
+                      incorrect and/or if the balance fees for the subscribed
+                      services are not paid on time.
+                    </li>
+                    <li>
+                      Our programs / diet sessions are tailor made and
+                      subscription based and are meant for personal use only.
+                      Enrolling for our programs and using the diet sessions
+                      provided by us do not give you the right or permission to
+                      resell and forward the same.
+                    </li>
+                    <li>
+                      All our programs have a limited time validity as mentioned
+                      on the website
+                      <a href="https://www.balancenutrition.in" target="_blank"
+                        >www.balancenutrition.in</a
+                      >
+                      and on the Mobile application - BalanceNutrition (Android
+                      and iOS) and the programs have to be completed within the
+                      validity period as specifically mentioned therein. The
+                      validity period for a 1 day program is 3 days, the
+                      validity period for a 3 days program is 5 days, the
+                      validity for a 10 days program is 15 days, the validity
+                      period for a 30 days program is 45 days, the validity
+                      period for a 60 days program is 80 days, the validity
+                      period for a 90 days program is 115 days and the validity
+                      period for a 120 days program is 150 days. M/s Balance
+                      Nutrition shall not extend the validity of your program
+                      under any circumstances. Clients have an option of
+                      freezing their program with M/s Balance Nutrition at an
+                      additional cost.
+                    </li>
+                    <li>Subject to jurisdiction of Mumbai, India.</li>
+                  </ol>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+</table>

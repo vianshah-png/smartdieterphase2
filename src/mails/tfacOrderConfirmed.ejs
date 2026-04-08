@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="light dark">
+  <meta name="supported-color-schemes" content="light dark">
+  <title>Order Confirmation</title>
+  <style>
+    /* Dark mode support */
+    :root {
+      color-scheme: light dark;
+      supported-color-schemes: light dark;
+    }
+    
+    @media (prefers-color-scheme: dark) {
+      .email-body {
+        background-color: #1a1a1a !important;
+      }
+      .email-container {
+        background-color: #2d2d2d !important;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.3) !important;
+      }
+      .header {
+        background: #4a4a4a !important;
+      }
+      .header h1 {
+        color: #e8e8e8 !important;
+      }
+      .content-section {
+        background-color: #2d2d2d !important;
+      }
+      .content-section h2 {
+        color: #e8e8e8 !important;
+      }
+      .content-section p {
+        color: #b8b8b8 !important;
+      }
+      .customer-text {
+        color: #e8e8e8 !important;
+      }
+      .customer-description {
+        color: #b8b8b8 !important;
+      }
+      .order-details-box {
+        background-color: #3a3a3a !important;
+      }
+      .order-details-title {
+        color: #e8e8e8 !important;
+        border-bottom: 2px solid #d6c7a9 !important;
+      }
+      .detail-label {
+        color: #b8b8b8 !important;
+      }
+      .detail-value {
+        color: #e8e8e8 !important;
+      }
+      .total-label {
+        color: #e8e8e8 !important;
+      }
+      .support-section {
+        background-color: #3a3a3a !important;
+        border-top: 1px solid #4a4a4a !important;
+      }
+      .support-title {
+        color: #e8e8e8 !important;
+      }
+      .support-text {
+        color: #b8b8b8 !important;
+      }
+      .footer {
+        background-color: #4a4a4a !important;
+      }
+      .footer-title {
+        color: #e8e8e8 !important;
+      }
+      .footer-links a {
+        color: #e8e8e8 !important;
+      }
+      .footer-copyright {
+        color: #b8b8b8 !important;
+      }
+      .divider-line {
+        border-top: 1px solid #4a4a4a !important;
+      }
+    }
+  </style>
+</head>
+<body class="email-body" style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #f5f5f5;">
+  <table role="presentation" style="width: 100%; border-collapse: collapse;">
+    <tr>
+      <td align="center" style="padding: 40px 0;">
+        <table role="presentation" class="email-container" style="width: 600px; max-width: 100%; border-collapse: collapse; background-color: #ffffff; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+          
+          <!-- Header -->
+          <tr>
+            <td class="header" style="background: #d6c7a9; padding: 40px 30px; text-align: center;">
+              <h1 style="margin: 0; color: #2c3e50; font-size: 28px; font-weight: 700;">Tees For A Cause</h1>
+            </td>
+          </tr>
+
+          <!-- Success Message -->
+          <tr>
+            <td class="content-section" style="padding: 40px 30px; text-align: center; background-color: #ffffff;">
+              <!-- Fixed tick mark container for mobile -->
+              <table role="presentation" style="width: 100%; border-collapse: collapse;">
+                <tr>
+                  <td align="center">
+                    <div style="width: 80px; height: 80px; background-color: #27ae60; border-radius: 50%; margin: 0 auto 20px; display: inline-block; text-align: center; line-height: 80px;">
+                      <span style="font-size: 48px; color: #ffffff; display: inline-block; vertical-align: middle; line-height: normal;">✓</span>
+                    </div>
+                  </td>
+                </tr>
+              </table>
+              <h2 style="margin: 0; font-size: 24px; font-weight: 600; color: #2c3e50;">Order Confirmed!</h2>
+              <p style="margin: 10px 0 0; font-size: 16px; color: #666666;">Thank you for your purchase</p>
+            </td>
+          </tr>
+
+          <!-- Customer Details -->
+          <tr>
+            <td style="padding: 30px;">
+              <p class="customer-text" style="margin: 0 0 20px; font-size: 16px; color: #2c3e50;">Hi <strong><%= customerName %></strong>,</p>
+              <p class="customer-description" style="margin: 0 0 20px; font-size: 14px; color: #555555; line-height: 1.6;">
+                We're excited to confirm that your order has been received and payment has been successfully processed. 
+                Your order is now being prepared for shipment.
+              </p>
+            </td>
+          </tr>
+
+          <!-- Order Details Box -->
+          <tr>
+            <td style="padding: 0 30px 30px;">
+              <table role="presentation" class="order-details-box" style="width: 100%; border-collapse: collapse; background-color: #f8f9fa; border-radius: 8px; overflow: hidden;">
+                <tr>
+                  <td style="padding: 20px;">
+                    <h3 class="order-details-title" style="margin: 0 0 15px; font-size: 18px; color: #2c3e50; border-bottom: 2px solid #d6c7a9; padding-bottom: 10px;">Order Details</h3>
+                    
+                    <table role="presentation" style="width: 100%; border-collapse: collapse;">
+                      <tr>
+                        <td class="detail-label" style="padding: 8px 0; font-size: 14px; color: #666666;">Order ID:</td>
+                        <td class="detail-value" style="padding: 8px 0; font-size: 14px; color: #2c3e50; text-align: right; font-weight: 600;">#<%= orderId %></td>
+                      </tr>
+                      <tr>
+                        <td class="detail-label" style="padding: 8px 0; font-size: 14px; color: #666666;">Payment ID:</td>
+                        <td class="detail-value" style="padding: 8px 0; font-size: 14px; color: #2c3e50; text-align: right; font-weight: 600;"><%= paymentId %></td>
+                      </tr>
+                      <tr>
+                        <td class="detail-label" style="padding: 8px 0; font-size: 14px; color: #666666;">Order Date:</td>
+                        <td class="detail-value" style="padding: 8px 0; font-size: 14px; color: #2c3e50; text-align: right;"><%= orderDate %></td>
+                      </tr>
+                      <tr>
+                        <td class="detail-label" style="padding: 8px 0; font-size: 14px; color: #666666;">Payment Method:</td>
+                        <td class="detail-value" style="padding: 8px 0; font-size: 14px; color: #2c3e50; text-align: right; text-transform: capitalize;"><%= paymentMethod %></td>
+                      </tr>
+                      <tr class="divider-line" style="border-top: 1px solid #dee2e6;">
+                        <td class="total-label" style="padding: 15px 0 8px; font-size: 16px; color: #2c3e50; font-weight: 700;">Total Amount:</td>
+                        <td style="padding: 15px 0 8px; font-size: 18px; color: #27ae60; text-align: right; font-weight: 700;"><%= currency %> <%= amount %></td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- Support Section -->
+          <tr>
+            <td class="support-section" style="padding: 30px; background-color: #f8f9fa; border-top: 1px solid #dee2e6;">
+              <h4 class="support-title" style="margin: 0 0 10px; font-size: 16px; color: #2c3e50;">Need Help?</h4>
+              <p class="support-text" style="margin: 0; font-size: 14px; color: #666666; line-height: 1.6;">
+                If you have any questions about your order, feel free to reach out to our support team at 
+                <a href="mailto:support@teesforacause.co" style="color: #d6c7a9; text-decoration: none;">support@teesforacause.co</a>
+              </p>
+            </td>
+          </tr>
+
+          <!-- Footer -->
+          <tr>
+            <td class="footer" style="padding: 30px; background-color: #d6c7a9; text-align: center;">
+              <p class="footer-title" style="margin: 0 0 10px; font-size: 14px; color: #2c3e50;">
+                <strong>Tees For A Cause</strong> - Making a Difference, One Tee at a Time
+              </p>
+              <p class="footer-links" style="margin: 0 0 15px; font-size: 12px; color: #5a5a5a;">
+                <a href="https://teesforacause.co" style="color: #2c3e50; text-decoration: none; margin: 0 10px;">Website</a> |
+                <a href="https://teesforacause.co/contact" style="color: #2c3e50; text-decoration: none; margin: 0 10px;">Contact</a> |
+                <a href="https://teesforacause.co/faq" style="color: #2c3e50; text-decoration: none; margin: 0 10px;">FAQ</a>
+              </p>
+              <p class="footer-copyright" style="margin: 0; font-size: 11px; color: #5a5a5a; line-height: 1.5;">
+                © <%= currentYear %> Tees For A Cause. All rights reserved.<br>
+                This email was sent regarding your order on teesforacause.co
+              </p>
+            </td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>

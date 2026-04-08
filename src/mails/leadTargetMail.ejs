@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title><%= title %></title>
+</head>
+<body>
+    <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+            <td align="center" bgcolor="#f5f5f5" style="padding: 20px;">
+                <table width="600" cellpadding="0" cellspacing="0" border="0" bgcolor="#ffffff">
+                    <!-- Header -->
+                    <tr>
+                        <td align="center" bgcolor="#03989F" style="padding: 30px; color: #ffffff; font-family: Arial, sans-serif;">
+                            <h1 style="margin: 0; font-size: 28px;"><%= header %></h1>
+                        </td>
+                    </tr>
+                    
+                    <!-- Body -->
+                    <tr>
+                        <td style="padding: 40px; font-family: Arial, sans-serif; color: #333333; line-height: 1.6;">
+                            <%- body %>
+                        </td>
+                    </tr>
+                    
+                    <!-- Footer -->
+                    <tr>
+                        <td align="center" bgcolor="#f8f8f8" style="padding: 20px; font-family: Arial, sans-serif; color: #666666; font-size: 12px;">
+                            <p style="margin: 5px 0;"><%= footerText %></p>
+                            <p style="margin: 5px 0;">© <%= currentYear %> Balance Nutrition. All rights reserved.</p>
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </table>
+</body>
+</html>
