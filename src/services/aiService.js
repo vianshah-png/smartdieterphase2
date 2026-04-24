@@ -84,6 +84,9 @@ Priority: Medical Issues > Diet Type > Allergies > Aversions
       <vegan>
         - STRICTLY FORBIDDEN: Meat, Poultry, Fish, Seafood, Eggs, ALL Dairy products.
       </vegan>
+      <jain>
+        - STRICTLY FORBIDDEN: Meat, Poultry, Fish, Seafood, Eggs, Onion, Garlic, Potato, Radish.
+      </jain>
       <non_vegetarian>
         - ALLOWED: All foods EXCEPT stated allergies and aversions.
       </non_vegetarian>
