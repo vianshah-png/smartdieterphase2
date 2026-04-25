@@ -54,7 +54,9 @@ export const runDietComplianceAudit = async (req, res, next) => {
         "ass_m_h.pcos",
         "ass_m_h.thyroid",
         "ass_m_h.fatty_liver",
-        "ass_m_h.other_medical_issue"
+        "ass_m_h.other_medical_issue",
+        "ass_n_l.jain_food_restrictions",
+        "ass_n_l.avoided_jain_foods"
       ],
       joins: [
         { type: "LEFT", table: `${tables.assessment_nutrition_and_lifestyle} ass_n_l`, on: "ass_n_l.user_id = ud.user_id" },
@@ -154,8 +156,7 @@ export const runDietComplianceAudit = async (req, res, next) => {
     ].filter(Boolean).join(" ");
 
     // Extract Recipe IDs from the HTML links
-    const idMatches = mealContent.match(/recipe-details\/(\d+)/g) || [];
-    const recipeIds = [...new Set(idMatches.map(match => {
+    const idMatches = mealContent.match(/recipe-details\/(\d+)/g) || mealContent.match(/redirect_id=(\d+)/g) || []; const recipeIds = [...new Set(idMatches.map(match => {
       const id = match.match(/\d+/);
       return id ? parseInt(id[0]) : null;
     }).filter(Boolean))];

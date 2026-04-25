@@ -32,6 +32,8 @@ export const generateAuditInference = async ({ client, dishes, extractedNames, m
               - Allergies : ${client.food_allergies || 'None'}
               - Aversions : ${client.food_aversions || 'None'}
               - Medical Issues : ${medicalIssues || 'None'}
+              - Jain Food Restrictions : ${client.jain_food_restrictions || 'No'}
+              - Avoided Jain Foods : ${client.jain_food_restrictions === 'Yes' ? (client.avoided_jain_foods || 'None specified') : 'N/A'}
     </client_profile>
     <audit_workflow>
       1. Initial Scan: Parse DB INGREDIENTS (Grounded) & Dishes from TEMPLATE. 
@@ -85,7 +87,12 @@ Priority: Medical Issues > Diet Type > Allergies > Aversions
         - STRICTLY FORBIDDEN: Meat, Poultry, Fish, Seafood, Eggs, ALL Dairy products.
       </vegan>
       <jain>
-        - STRICTLY FORBIDDEN: Meat, Poultry, Fish, Seafood, Eggs, Onion, Garlic, Potato, Radish.
+        - IF Jain Food Restrictions = "1":
+          - STRICTLY FORBIDDEN: All items listed in the client's "${client.avoided_jain_foods}" field above.
+          - These are the specific foods the client has declared they avoid due to Jain dietary practices.
+          - Flag any dish containing these ingredients as a "diet_type_violation" with reason referencing Jain restrictions.
+        - IF Jain Food Restrictions = "0" or not set:
+          - Do NOT apply any Jain-specific restrictions.
       </jain>
       <non_vegetarian>
         - ALLOWED: All foods EXCEPT stated allergies and aversions.
