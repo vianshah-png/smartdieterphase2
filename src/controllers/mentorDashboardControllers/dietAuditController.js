@@ -39,7 +39,7 @@ const parseIngredientNames = (ingredientsRaw) => {
 
 export const runDietComplianceAudit = async (req, res, next) => {
   try {
-    const { user_id, diet_id, is_edit } = req.body;
+    const { user_id, diet_id, is_edit, generate_alternatives = false } = req.body;
 
     // STEP 1 & 2: Get Client Context (Eating Habit, Allergies)
     const { results: clientContext } = await readRecord({
@@ -238,7 +238,7 @@ export const runDietComplianceAudit = async (req, res, next) => {
 
     // STEP 6B: Phase 3 — Fetch BN Recipe Pool for alternatives (Structured RAG)
     let suggestions = [];
-    if (auditResults && auditResults.length > 0) {
+    if (generate_alternatives && auditResults && auditResults.length > 0) {
       try {
         const habit = (clientContext[0].eating_habit || '').toLowerCase().trim();
         const allowedTypeIds = RECIPE_TYPE_MAP[habit] || [1];

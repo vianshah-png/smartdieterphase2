@@ -13,6 +13,11 @@ export const dietAuditValidator = [
     .notEmpty()
     .isNumeric()
     .withMessage("diet_id is required to identify the template to audit"),
+
+  body("generate_alternatives")
+    .optional()
+    .isBoolean()
+    .withMessage("generate_alternatives must be a boolean"),
 ];
 
 /**
