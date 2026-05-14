@@ -32,8 +32,7 @@ export const generateAuditInference = async ({ client, dishes, extractedNames, m
               - Allergies : ${client.food_allergies || 'None'}
               - Aversions : ${client.food_aversions || 'None'}
               - Medical Issues : ${medicalIssues || 'None'}
-              - Jain Food Restrictions : ${client.jain_food_restrictions || 'No'}
-              - Avoided Jain Foods : ${client.jain_food_restrictions === 'Yes' ? (client.avoided_jain_foods || 'None specified') : 'N/A'}
+              - Jain Food Restrictions : ${client.avoided_jain_foods || 'None specified'}
     </client_profile>
     <audit_workflow>
       1. Initial Scan: Parse DB INGREDIENTS (Grounded) & Dishes from TEMPLATE. 
@@ -43,6 +42,7 @@ export const generateAuditInference = async ({ client, dishes, extractedNames, m
           - Aversion Match -> "aversion_conflict"
           - Medical Risk -> "medical_violation"
           - ICL Exclusion Match -> "icl_conflict"
+          - Jain Food Restrictions Match -> "diet_type_violation"
       4. Consolidation: If a single dish has multiple conflicting ingredients, you MUST group them into one result for that dish. Combine the reasons into a single concise paragraph.
       5. Medical Sensitivity Check: Apply "Moderation Aware" reasoning for natural sugars and dairy. 
       6. Safety Verification Pass (Self-Correction): 
@@ -87,12 +87,11 @@ Priority: Medical Issues > Diet Type > Allergies > Aversions
         - STRICTLY FORBIDDEN: Meat, Poultry, Fish, Seafood, Eggs, ALL Dairy products.
       </vegan>
       <jain>
-        - IF Jain Food Restrictions = "1":
+        - IF ${client.jain_food_restrictions || client.avoided_jain_foods || 'None specified'} are present:
           - STRICTLY FORBIDDEN: All items listed in the client's "${client.avoided_jain_foods}" field above.
           - These are the specific foods the client has declared they avoid due to Jain dietary practices.
           - Flag any dish containing these ingredients as a "diet_type_violation" with reason referencing Jain restrictions.
-        - IF Jain Food Restrictions = "0" or not set:
-          - Do NOT apply any Jain-specific restrictions.
+        
       </jain>
       <non_vegetarian>
         - ALLOWED: All foods EXCEPT stated allergies and aversions.
