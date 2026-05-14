@@ -10,11 +10,14 @@ import dietDetails from "../../models/dietDetailsModel.js";
  * Maps client eating_habit → allowed bn_recipe.recipe_type_id values
  */
 const RECIPE_TYPE_MAP = {
-  'Vegetarian': [1, 4],          // Veg + Vegan
-  'Vegan': [4],             // Vegan only
-  'Non Vegetarian': [1, 2, 3, 4, 5], // All types
-  'Ovo Vegetarian': [1, 3, 4],       // Veg + Ovo-Veg + Vegan
-  'Pescatarian': [1, 4, 5],       // Veg + Vegan + Pescatarian
+  'vegetarian': [1, 4],          // Veg + Vegan
+  'veg': [1, 4],
+  'vegan': [4],                  // Vegan only
+  'non vegetarian': [1, 2, 3],   // Veg + Non-Veg + Ovo-Veg
+  'non veg': [1, 2, 3],
+  'ovo vegetarian': [1, 3],      // Veg + Ovo-Veg
+  'ovo veg': [1, 3],
+  'pescatarian': [1, 4, 5],      // Veg + Vegan + Pescatarian
 };
 
 /**
@@ -131,9 +134,10 @@ export const runDietComplianceAudit = async (req, res, next) => {
         if (dietData[slot] && typeof dietData[slot] === 'string') {
           // Detect any BN shop product: any chunk containing 'BN' + a shop CTA ('Order Now'/'Buy Here') regardless of hyphen/space variations
           const isBnShopChunk = (c) => {
-            const hasBN = /\bBN\b|BN[-\s]/i.test(c);
-            const hasCta = c.includes('Order Now') || c.includes('Buy Here');
-            return c.includes('shop.balancenutrition.in') || (hasBN && hasCta);
+            const lowerC = c.toLowerCase();
+            const hasBN = /\bbn\b|bn[-\s]/i.test(c);
+            const hasCta = lowerC.includes('order now') || lowerC.includes('buy here') || lowerC.includes('buy now');
+            return lowerC.includes('shop.balancenutrition.in') || (hasBN && hasCta);
           };
 
           const hasAnyShopContent = isBnShopChunk(dietData[slot]);
@@ -236,14 +240,31 @@ export const runDietComplianceAudit = async (req, res, next) => {
     let suggestions = [];
     if (auditResults && auditResults.length > 0) {
       try {
-        const allowedTypeIds = RECIPE_TYPE_MAP[clientContext[0].eating_habit] || [1];
+        const habit = (clientContext[0].eating_habit || '').toLowerCase().trim();
+        const allowedTypeIds = RECIPE_TYPE_MAP[habit] || [1];
 
-        // Collect all conflicting ingredient names for exclusion filtering
+        // Collect ALL exclusion keywords: audit conflicts + ICL exclusions + aversion foods
         const conflictingIngredients = [...new Set(
           auditResults.map(c => c.conflicting_ingredient)
         )];
 
+        // Parse aversion foods into individual keywords
+        const aversionKeywords = (clientContext[0].food_aversions || '')
+          .split(/[,;]/)
+          .map(s => s.trim().toLowerCase())
+          .filter(s => s.length > 2);
+
+        // Merge all exclusion sources into one set
+        const allExclusionKeywords = [...new Set([
+          ...conflictingIngredients.map(ci => ci.toLowerCase().split(/[,\/]/)[0].trim()),
+          ...iclExclusions.map(i => i.toLowerCase().trim()),
+          ...aversionKeywords
+        ])].filter(k => k.length > 2);
+
+        console.log(`🚫 All exclusion keywords for pool filtering: ${allExclusionKeywords.join(', ')}`);
+
         // Fetch candidate BN recipes — diet-type filtered, excluding in-plan recipes
+        // Increased limit for wider food-type diversity (juices, smoothies, etc.)
         const { results: bnRecipePool } = await readRecord({
           table: `${tables.recipe} r`,
           selectFields: [
@@ -261,22 +282,21 @@ export const runDietComplianceAudit = async (req, res, next) => {
             { field: 'r.recipe_type_id', operator: 'IN', value: allowedTypeIds },
             ...(recipeIds.length ? [{ field: 'r.id', operator: 'NOT IN', value: recipeIds }] : [])
           ],
-          pagination: { limit: 80 },
+          pagination: { limit: 150 },
           orderBy: ['r.view_count DESC']
         });
 
         console.log(`📦 BN Recipe Pool fetched: ${bnRecipePool.length} candidates`);
 
-        // Post-filter: remove any recipe whose ingredients contain a conflicting item
+        // Post-filter: remove any recipe whose title OR ingredients contain ANY exclusion keyword
         const safePool = bnRecipePool.filter(recipe => {
+          const titleStr = (recipe.title || '').toLowerCase();
           const ingredStr = String(recipe.ingredients || '').toLowerCase();
-          return !conflictingIngredients.some(ci => {
-            const keyword = ci.toLowerCase().split(/[,\/]/)[0].trim();
-            return keyword.length > 2 && ingredStr.includes(keyword);
-          });
+          const combined = `${titleStr} ${ingredStr}`;
+          return !allExclusionKeywords.some(keyword => combined.includes(keyword));
         });
 
-        console.log(`🛡️ Safe pool after ingredient exclusion: ${safePool.length} recipes`);
+        console.log(`🛡️ Safe pool after exclusion filter: ${safePool.length} recipes`);
 
         // Trim to token-efficient format for AI
         const trimmedPool = safePool.slice(0, 60).map(r => ({
@@ -290,6 +310,50 @@ export const runDietComplianceAudit = async (req, res, next) => {
 
         // Deduplicate auditResults to reduce token usage and duplicate generations
         const dedupedConflictsMap = new Map();
+
+        // Build per-slot meal lines for accurate combo detection
+        const mealSlots = [
+          dietData.on_rising, dietData.breakfast, dietData.mid_morning,
+          dietData.lunch, dietData.post_lunch, dietData.tea_eve,
+          dietData.pre_workout, dietData.post_workout, dietData.dinner,
+          dietData.pre_dinner, dietData.post_dinner, dietData.bed_time
+        ].filter(Boolean);
+
+        // Split each slot by OR boundaries to get individual option lines
+        const mealLines = [];
+        mealSlots.forEach(slot => {
+          const options = slot.split(/(?:(?:<br\s*\/?>|\n)\s*)*\bOR\b(?:\s*(?:<br\s*\/?>|\n)\s*)*/gi);
+          options.forEach(opt => {
+            const cleaned = opt.replace(/<[^>]+>/g, ' ').trim();
+            if (cleaned) mealLines.push(cleaned);
+          });
+        });
+
+        /**
+         * Detects if a line is a combo (has '+' OUTSIDE brackets/parentheses)
+         * e.g. "1 bowl soup + 1 sandwich" → true (combo)
+         * e.g. "1 bowl shaak [makai + bateta]" → false ('+' is inside brackets, not a combo separator)
+         */
+        const hasComboPlus = (line) => {
+          // Strip bracket and parenthesis content first
+          const stripped = line.replace(/\[[^\]]*\]/g, '').replace(/\([^)]*\)/g, '');
+          return /\s\+\s/.test(stripped);
+        };
+
+        /**
+         * Extracts clean companion dish names from a combo line
+         * e.g. "1 bowl soup + 1 sandwich + 1 bowl dal" with conflict "soup"
+         *    → companions: ["sandwich", "dal"]
+         */
+        const getCompanionDishes = (line, conflictDishName) => {
+          const stripped = line.replace(/\[[^\]]*\]/g, '').replace(/\([^)]*\)/g, '');
+          // Split the combo by '/' first to get alternatives, then by '+' to get items
+          const segments = stripped.split(/\s\/\s/).flatMap(seg => seg.split(/\s\+\s/));
+          return segments
+            .map(s => s.replace(/\d+\s*(bowl|cup|tsp|tbsp|gms?|serving|piece|slice|nos?)\s*/gi, '').trim())
+            .filter(s => s.length > 1 && !s.toLowerCase().includes(conflictDishName.toLowerCase()));
+        };
+
         auditResults.forEach(c => {
           // Group by conflict_type and reason (or conflicting_ingredient). This acts as a unique signature.
           const sig = c.conflicting_ingredient
@@ -297,7 +361,20 @@ export const runDietComplianceAudit = async (req, res, next) => {
             : c.dish_name.toLowerCase().trim();
 
           if (!dedupedConflictsMap.has(sig)) {
-            dedupedConflictsMap.set(sig, { ...c });
+            const dishNameLower = c.dish_name.toLowerCase().trim();
+
+            // Find the meal line that contains this dish
+            const matchingLine = mealLines.find(line => line.toLowerCase().includes(dishNameLower));
+
+            let contextStr;
+            if (matchingLine && hasComboPlus(matchingLine)) {
+              const companions = getCompanionDishes(matchingLine, c.dish_name);
+              contextStr = `Group Alternative: "${c.dish_name}" is paired in a combo with: [${companions.join(', ')}]. The alternative MUST be the same food type/category as "${c.dish_name}" (e.g. liquid→liquid, rice→rice, bread→bread) and pair well with [${companions.join(', ')}].`;
+            } else {
+              contextStr = `Standalone Alternative: "${c.dish_name}" appears as a standalone option (separated by '/' or 'OR'). Suggest alternatives that match the same food type/category as "${c.dish_name}".`;
+            }
+
+            dedupedConflictsMap.set(sig, { ...c, meal_context: contextStr });
           }
         });
         const uniqueConflicts = Array.from(dedupedConflictsMap.values());

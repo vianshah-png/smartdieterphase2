@@ -262,8 +262,28 @@ export const generateAlternativeSuggestions = async ({
       For "full_replacement":
         - Select exactly 3 alternative dishes from the BN RECIPE POOL below
         - Each alternative MUST be a recipe from the pool (use its exact id, title, slug, and category_name)
-        - Each alternative must be safe for ALL of the client's constraints (diet type, allergies, aversions, medical, ICL)
-        - Provide a 1-line reason for why each alternative is a safe swap
+        - Each alternative must be safe and non repetitive for ALL of the client's constraints (diet type, allergies, aversions, medical, ICL)
+        
+        CRITICAL — Food Type Matching Rule:
+        The alternative MUST be the SAME food type/category as the conflicting dish. This is the #1 priority.
+        Food type taxonomy:
+          - Liquid (soup, smoothie, juice, shake, buttermilk, lassi, coffee, tea) → replace with another Liquid
+          - Rice (brown rice, white rice, jeera rice, pulao) → replace with another Rice dish (at least 2 of 3 alternatives MUST be rice-based)
+          - Bread/Roti (roti, paratha, naan, thepla, puri) → replace with another Bread
+          - Salad (green salad, raita, kachumber) → replace with another Salad/side
+          - Dal/Lentil (dal, sambar, rasam) → replace with another Dal/Lentil
+          - Sabzi/Curry (any cooked vegetable/paneer dish) → replace with another Sabzi/Curry
+          - Snack (cookie, chips, makhana, namkeen) → replace with another Snack
+          - Full meal (biryani, khichdi, frankie, wrap, sandwich) → replace with another Full meal
+
+        Meal Context Rule (read the "meal_context" field on each conflict):
+          - "Group Alternative": The conflicting dish is part of a combo with companion dishes listed. The alternative must:
+              1. Be the same food type as the conflict dish (e.g. soup → soup/liquid, rice → rice)
+              2. Pair naturally with the listed companion dishes
+              Example: If soup is the conflict and sandwich is the companion → suggest another liquid (smoothie, buttermilk, another soup variety) — NOT a frankie or roti
+          - "Standalone Alternative": The conflicting dish is an independent option. Only match food type.
+        
+        - Provide a 1-line reason for why each alternative is a safe swap and matches the food type
         - Do NOT include swap_instruction — leave it empty
     </suggestion_rules>
 
