@@ -2,6 +2,7 @@ import Router from "express";
 import { 
   runDietComplianceAudit 
 } from "../../controllers/mentorDashboardControllers/dietAuditController.js";
+import { ingestAllRecipes } from "../../services/embeddingService.js";
 import { 
   validateHandler 
 } from "../../utils/validators.js"; //
@@ -29,6 +30,25 @@ router.post(
   validateHandler,    // Standard project error handler
   runDietComplianceAudit
 );
+
+/**
+ * @route   POST /api/v1/diet-audit/ingest-recipes
+ * @desc    Bulk ingest all active BN recipes into Qdrant vector index (one-time bootstrap)
+ * @access  Admin only
+ */
+router.post("/ingest-recipes", async (req, res) => {
+  try {
+    const result = await ingestAllRecipes();
+    res.status(200).json({
+      status: 'success',
+      message: `Recipe ingestion complete: ${result.success}/${result.total} recipes embedded`,
+      data: result,
+    });
+  } catch (error) {
+    console.error('❌ Ingestion error:', error);
+    res.status(500).json({ status: 'error', message: error.message });
+  }
+});
 
 /**
  * @route   GET /api/v1/diet-audit/tester

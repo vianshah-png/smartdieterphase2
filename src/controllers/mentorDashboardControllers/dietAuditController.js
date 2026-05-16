@@ -4,7 +4,120 @@ import { ErrorHandler } from "../../utils/ErrorClass.js";
 import { ApiResponse } from "../../utils/APiResponse.js";
 import { extractDishesFromHtml } from "../../helper/parser.js";
 import { generateAuditInference, generateAlternativeSuggestions } from "../../services/aiService.js";
+import { searchSimilarRecipes } from "../../services/embeddingService.js";
 import dietDetails from "../../models/dietDetailsModel.js";
+
+// ─────────────────────────────────────────────────────────────────────────────
+// BN Assessment API helpers — called in parallel, all non-blocking
+// assessment_id is supplied by the caller (from the assessment-list API response)
+// ─────────────────────────────────────────────────────────────────────────────
+const BN_API_BASE = 'https://bn-new-api.balancenutritiononline.com/api/v1/assessment';
+
+/**
+ * Fetches the client's 24-Hour Diet Recall and returns a flat list of
+ * all dishes/foods they mentioned across every meal slot.
+ */
+const fetchDietRecall = async (user_id, assessment_id) => {
+  try {
+    const res = await fetch(`${BN_API_BASE}/get-diet-recall-details`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ user_id: String(user_id), assessment_id })
+    });
+    const json = await res.json();
+    if (!json?.data) return [];
+
+    const slotKeys = [
+      'breakfast_details', 'mid_morning_details', 'lunch_details',
+      'late_evening_details', 'dinner_details', 'pre_or_post_workout_meal'
+    ];
+    const dishes = [];
+    for (const key of slotKeys) {
+      const raw = json.data[key];
+      if (!raw) continue;
+      try {
+        const parsed = typeof raw === 'string' ? JSON.parse(raw) : raw;
+        const menuOptions = parsed?.menu_options || {};
+        Object.values(menuOptions).forEach(opt => {
+          if (typeof opt === 'string' && opt.trim()) dishes.push(opt.trim());
+        });
+      } catch { /* ignore malformed slots */ }
+    }
+    console.log(`🍽️  Diet Recall: ${dishes.length} menu entries fetched`);
+    return dishes;
+  } catch (e) {
+    console.error('⚠️ fetchDietRecall failed (non-blocking):', e.message);
+    return [];
+  }
+};
+
+/**
+ * Fetches Food Frequency data and splits it into high-frequency
+ * (Daily / Multiple times a week) and low-frequency (Rarely / Once in 15 days) lists.
+ */
+const fetchFoodFrequency = async (user_id, assessment_id) => {
+  try {
+    const res = await fetch(`${BN_API_BASE}/get-food-frequency-details`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ user_id: String(user_id), assessment_id })
+    });
+    const json = await res.json();
+    const items = Array.isArray(json?.data) ? json.data : [];
+
+    const HIGH_FREQ_LABELS = ['daily', 'twice a week', 'thrice a week', 'multiple times', 'every day'];
+    const LOW_FREQ_LABELS  = ['rarely', 'once in 15 days', 'once a month', 'never'];
+
+    const high = [], low = [];
+    items.forEach(({ food_name, value }) => {
+      const v = (value || '').toLowerCase();
+      if (HIGH_FREQ_LABELS.some(l => v.includes(l))) high.push(food_name);
+      else if (LOW_FREQ_LABELS.some(l => v.includes(l))) low.push(food_name);
+    });
+    console.log(`📊 Food Frequency: ${high.length} high-freq, ${low.length} low-freq items`);
+    return { high, low };
+  } catch (e) {
+    console.error('⚠️ fetchFoodFrequency failed (non-blocking):', e.message);
+    return { high: [], low: [] };
+  }
+};
+
+/**
+ * Fetches Nutrition & Lifestyle details and extracts preferred cuisines
+ * and food preferences — used to steer alternatives toward familiar territory.
+ */
+const fetchNutritionLifestyle = async (user_id, assessment_id) => {
+  try {
+    const res = await fetch(`${BN_API_BASE}/get-nutrition-and-lifestyle-details`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ user_id: String(user_id), assessment_id })
+    });
+    const json = await res.json();
+    const data = json?.data || {};
+
+    // food_preference may already be a parsed array from the API
+    const foodPreferences = Array.isArray(data.food_preference)
+      ? data.food_preference
+      : [];
+
+    // preferred_cuisine is a JSON-encoded object: {cuisine:{cuisine_1:"Indian",...},other_cuisine:{...}}
+    let preferredCuisines = [];
+    try {
+      const raw = data.preferred_cuisine;
+      const cuisineObj = typeof raw === 'string' ? JSON.parse(raw) : raw;
+      const main   = Object.values(cuisineObj?.cuisine       || {});
+      const others = Object.values(cuisineObj?.other_cuisine || {});
+      preferredCuisines = [...main, ...others].filter(Boolean);
+    } catch { /* ignore */ }
+
+    console.log(`🌏 Nutrition & Lifestyle: ${preferredCuisines.length} cuisines, ${foodPreferences.length} food preferences`);
+    return { foodPreferences, preferredCuisines };
+  } catch (e) {
+    console.error('⚠️ fetchNutritionLifestyle failed (non-blocking):', e.message);
+    return { foodPreferences: [], preferredCuisines: [] };
+  }
+};
 
 /**
  * Maps client eating_habit → allowed bn_recipe.recipe_type_id values
@@ -39,7 +152,7 @@ const parseIngredientNames = (ingredientsRaw) => {
 
 export const runDietComplianceAudit = async (req, res, next) => {
   try {
-    const { user_id, diet_id, is_edit, generate_alternatives = false } = req.body;
+    const { user_id, diet_id, is_edit, generate_alternatives = true, assessment_id } = req.body;
 
     // STEP 1 & 2: Get Client Context (Eating Habit, Allergies)
     const { results: clientContext } = await readRecord({
@@ -50,20 +163,11 @@ export const runDietComplianceAudit = async (req, res, next) => {
         "ass_n_l.eating_habit",
         "ass_n_l.food_allergies",
         "ass_n_l.food_aversions",
-        "ass_m_h.acidity",
-        "ass_m_h.blood_pressure",
-        "ass_m_h.cholesterol",
-        "ass_m_h.diabetes",
-        "ass_m_h.pcos",
-        "ass_m_h.thyroid",
-        "ass_m_h.fatty_liver",
-        "ass_m_h.other_medical_issue",
         "ass_n_l.jain_food_restrictions",
         "ass_n_l.avoided_jain_foods"
       ],
       joins: [
         { type: "LEFT", table: `${tables.assessment_nutrition_and_lifestyle} ass_n_l`, on: "ass_n_l.user_id = ud.user_id" },
-        { type: "LEFT", table: `${tables.assessment_medical_history} ass_m_h`, on: "ass_m_h.user_id = ud.user_id" },
         { type: "LEFT", table: `countries c`, on: "c.country_id = ud.country_id" }
       ],
       conditions: [
@@ -76,28 +180,33 @@ export const runDietComplianceAudit = async (req, res, next) => {
 
     if (!clientContext.length) return next(new ErrorHandler("Client profile not found", 404));
 
-    // STEP 2B: Consolidate Medical Issues
-    const medData = clientContext[0];
-    let medicalIssues = [];
-    if (medData.acidity) medicalIssues.push("Acidity");
-    if (medData.blood_pressure) medicalIssues.push("Blood Pressure");
-    if (medData.cholesterol) medicalIssues.push("Cholesterol");
-    if (medData.diabetes) medicalIssues.push("Diabetes");
-    if (medData.pcos) medicalIssues.push("PCOS");
-    if (medData.thyroid) medicalIssues.push("Thyroid");
-    if (medData.fatty_liver) medicalIssues.push("Fatty Liver");
+    // STEP 2B: Fetch BN Assessment data in parallel (non-blocking)
+    // assessment_id is provided in the request body by the caller
+    // (the caller gets it from the assessment-list API response)
+    let recallDishes = [];
+    let highFrequencyFoods = [];
+    let lowFrequencyFoods = [];
+    let preferredCuisines = [];
+    let foodPreferences = [];
 
-    if (medData.other_medical_issue) {
-      try {
-        const others = JSON.parse(medData.other_medical_issue);
-        if (typeof others === 'object') {
-          medicalIssues.push(...Object.values(others));
-        }
-      } catch (e) {
-        console.error("Error parsing other_medical_issue:", e);
-      }
+    if (assessment_id) {
+      const [recallResult, freqResult, nlResult] = await Promise.allSettled([
+        fetchDietRecall(user_id, assessment_id),
+        fetchFoodFrequency(user_id, assessment_id),
+        fetchNutritionLifestyle(user_id, assessment_id)
+      ]);
+      recallDishes        = recallResult.status === 'fulfilled'  ? recallResult.value         : [];
+      const freq          = freqResult.status   === 'fulfilled'  ? freqResult.value           : { high: [], low: [] };
+      highFrequencyFoods  = freq.high;
+      lowFrequencyFoods   = freq.low;
+      const nl            = nlResult.status     === 'fulfilled'  ? nlResult.value             : { foodPreferences: [], preferredCuisines: [] };
+      foodPreferences     = nl.foodPreferences;
+      preferredCuisines   = nl.preferredCuisines;
+    } else {
+      console.warn('⚠️ assessment_id not provided — skipping BN assessment enrichment');
     }
-    const medicalIssuesStr = medicalIssues.join(", ") || "None";
+
+    // (Medical issue conflict detection removed — not used in audit)
     let dietData;
     // STEP 3: Retrieve full diet template metadata
     if (is_edit) {
@@ -232,81 +341,15 @@ export const runDietComplianceAudit = async (req, res, next) => {
       client: clientContext[0],
       dishes: groundedDishes,
       extractedNames: filteredTemplateNames,
-      medicalIssues: medicalIssuesStr,
       iclExclusions
     });
 
-    // STEP 6B: Phase 3 — Fetch BN Recipe Pool for alternatives (Structured RAG)
+    // STEP 6B: Phase 3 — True RAG: Vector search for alternatives
     let suggestions = [];
     if (generate_alternatives && auditResults && auditResults.length > 0) {
       try {
         const habit = (clientContext[0].eating_habit || '').toLowerCase().trim();
         const allowedTypeIds = RECIPE_TYPE_MAP[habit] || [1];
-
-        // Collect ALL exclusion keywords: audit conflicts + ICL exclusions + aversion foods
-        const conflictingIngredients = [...new Set(
-          auditResults.map(c => c.conflicting_ingredient)
-        )];
-
-        // Parse aversion foods into individual keywords
-        const aversionKeywords = (clientContext[0].food_aversions || '')
-          .split(/[,;]/)
-          .map(s => s.trim().toLowerCase())
-          .filter(s => s.length > 2);
-
-        // Merge all exclusion sources into one set
-        const allExclusionKeywords = [...new Set([
-          ...conflictingIngredients.map(ci => ci.toLowerCase().split(/[,\/]/)[0].trim()),
-          ...iclExclusions.map(i => i.toLowerCase().trim()),
-          ...aversionKeywords
-        ])].filter(k => k.length > 2);
-
-        console.log(`🚫 All exclusion keywords for pool filtering: ${allExclusionKeywords.join(', ')}`);
-
-        // Fetch candidate BN recipes — diet-type filtered, excluding in-plan recipes
-        // Increased limit for wider food-type diversity (juices, smoothies, etc.)
-        const { results: bnRecipePool } = await readRecord({
-          table: `${tables.recipe} r`,
-          selectFields: [
-            'r.id', 'r.title', 'r.slug',
-            'r.ingredients', 'r.recipe_type_id',
-            'r.category_id', 'r.health_tags', 'r.nutrition_tags',
-            'c.category_name'
-          ],
-          joins: [
-            { type: "LEFT", table: `${tables.category} c`, on: "r.category_id = c.category_id" }
-          ],
-          conditions: [
-            { field: 'r.is_deleted', operator: '=', value: 0 },
-            { field: 'r.status', operator: '=', value: 'active' },
-            { field: 'r.recipe_type_id', operator: 'IN', value: allowedTypeIds },
-            ...(recipeIds.length ? [{ field: 'r.id', operator: 'NOT IN', value: recipeIds }] : [])
-          ],
-          pagination: { limit: 150 },
-          orderBy: ['r.view_count DESC']
-        });
-
-        console.log(`📦 BN Recipe Pool fetched: ${bnRecipePool.length} candidates`);
-
-        // Post-filter: remove any recipe whose title OR ingredients contain ANY exclusion keyword
-        const safePool = bnRecipePool.filter(recipe => {
-          const titleStr = (recipe.title || '').toLowerCase();
-          const ingredStr = String(recipe.ingredients || '').toLowerCase();
-          const combined = `${titleStr} ${ingredStr}`;
-          return !allExclusionKeywords.some(keyword => combined.includes(keyword));
-        });
-
-        console.log(`🛡️ Safe pool after exclusion filter: ${safePool.length} recipes`);
-
-        // Trim to token-efficient format for AI
-        const trimmedPool = safePool.slice(0, 60).map(r => ({
-          id: r.id,
-          title: r.title,
-          slug: r.slug,
-          category_name: r.category_name,
-          category_id: r.category_id,
-          ingredients: parseIngredientNames(r.ingredients)
-        }));
 
         // Deduplicate auditResults to reduce token usage and duplicate generations
         const dedupedConflictsMap = new Map();
@@ -380,13 +423,63 @@ export const runDietComplianceAudit = async (req, res, next) => {
         const uniqueConflicts = Array.from(dedupedConflictsMap.values());
         console.log(`🧩 Original conflicts: ${auditResults.length}, Unique conflicts to process: ${uniqueConflicts.length}`);
 
-        // STEP 6C: Call AI to generate smart suggestions
+        // RAG RETRIEVAL: Semantic vector search per conflict instead of SQL dump
+        // Build a combined pool from targeted searches per conflict dish
+        // RAG queries are enriched with the client's real eating patterns for better vector alignment
+        const ragPoolMap = new Map(); // dedup by recipe ID
+
+        // Build enrichment suffix once (shared across all conflict queries)
+        const recallContext   = recallDishes.length
+          ? `, familiar to someone who eats: ${recallDishes.slice(0, 5).join(', ')}`
+          : '';
+        const cuisineContext  = preferredCuisines.length
+          ? `, preferred cuisines: ${preferredCuisines.slice(0, 3).join(', ')}`
+          : '';
+
+        for (const conflict of uniqueConflicts) {
+          const searchQuery = `Safe ${habit} alternative for ${conflict.dish_name}, same food category and type${recallContext}${cuisineContext}`;
+          console.log(`🔍 RAG search: "${searchQuery}"`);
+
+          const results = await searchSimilarRecipes({
+            queryText: searchQuery,
+            allowedTypeIds,
+            excludeIds: recipeIds,
+            limit: 8,
+          });
+
+          console.log(`   ↳ Found ${results.length} candidates: ${results.map(r => r.title).join(' | ')}`);
+
+          results.forEach(r => {
+            if (!ragPoolMap.has(r.id)) {
+              ragPoolMap.set(r.id, r);
+            }
+          });
+        }
+
+        const trimmedPool = Array.from(ragPoolMap.values()).map(r => ({
+          id: r.id,
+          title: r.title,
+          slug: r.slug,
+          category_name: r.category_name,
+          category_id: r.category_id,
+          ingredients: r.ingredients ? r.ingredients.split(', ') : []
+        }));
+
+        console.log(`📦 RAG pool: ${trimmedPool.length} targeted recipes (was 60 with SQL dump)`);
+
+        // STEP 6C: Call AI to generate smart suggestions (enriched with eating patterns)
         const aiResponseSuggestions = await generateAlternativeSuggestions({
           conflicts: uniqueConflicts,
           client: clientContext[0],
-          medicalIssues: medicalIssuesStr,
           iclExclusions,
-          bnRecipePool: trimmedPool
+          bnRecipePool: trimmedPool,
+          clientEatingPatterns: {
+            recallDishes,
+            highFrequencyFoods,
+            lowFrequencyFoods,
+            preferredCuisines,
+            foodPreferences
+          }
         });
 
         // Link the generated suggestions back to the unique signatures
@@ -458,8 +551,12 @@ export const runDietComplianceAudit = async (req, res, next) => {
         diet_template: dietData,
         client_context: {
           ...clientContext[0],
-          medical_issues: medicalIssuesStr,
           icl_exclusions: iclExclusions
+        },
+        _rag_diagnostics: {
+          alternatives_enabled: generate_alternatives,
+          conflicts_found: auditResults.length,
+          suggestions_generated: suggestions.length,
         }
       }
     }));

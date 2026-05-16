@@ -182,15 +182,7 @@
             return '';
         }
 
-        window.showMedicalConflicts = false;
         window.auditData = null;
-
-        function toggleMedicalConflicts() {
-            window.showMedicalConflicts = !window.showMedicalConflicts;
-            const btn = document.getElementById('toggleMedBtn');
-            if (btn) btn.innerText = window.showMedicalConflicts ? 'Hide Conflicts' : 'Show Conflicts';
-            renderConflictsUI();
-        }
 
         function renderResults(data) {
             window.auditData = data;
@@ -204,13 +196,6 @@
             <div><p class="text-[10px] text-indigo-400 uppercase font-bold">Aversions</p><p class="font-bold">${client_context.food_aversions || 'None'}</p></div>
             <div><p class="text-[10px] text-indigo-400 uppercase font-bold">Jain Food Restrictions</p><p class="font-bold">${client_context.jain_food_restrictions || 'None'}</p></div>
             <div><p class="text-[10px] text-indigo-400 uppercase font-bold">Avoided Jain Foods</p><p class="font-bold">${client_context.avoided_jain_foods || 'None'}</p></div>
-            <div>
-                <p class="text-[10px] text-red-500 uppercase font-bold flex items-center justify-between">
-                    Medical Issues
-                    <button id="toggleMedBtn" onclick="toggleMedicalConflicts()" class="bg-red-100 text-red-600 px-2 py-0.5 rounded text-[9px] hover:bg-red-200 uppercase transition tracking-wider">Show Conflicts</button>
-                </p>
-                <p class="font-bold text-red-700">${client_context.medical_issues || 'None'}</p>
-            </div>
         `;
 
             // 2. Template Metadata
@@ -232,15 +217,10 @@
             if (!window.auditData) return;
             const { audit_results, diet_template } = window.auditData;
 
-            // Filter medical conflicts based on UI state
-            const visibleResults = window.showMedicalConflicts
-                ? audit_results
-                : audit_results.filter(c => !String(c.conflict_type).toUpperCase().includes('MEDICAL'));
-
             // 3. Conflict Sidebar (with Phase 3 suggestions)
             const list = document.getElementById('conflictList');
-            list.innerHTML = visibleResults.length > 0
-                ? visibleResults.map(c => `
+            list.innerHTML = audit_results.length > 0
+                ? audit_results.map(c => `
                 <div class="p-3 bg-red-50 border-l-4 border-red-500 rounded-lg shadow-sm">
                     <p class="font-bold text-slate-900 text-sm">${c.dish_name}</p>
                     <p class="text-[10px] font-black text-red-600 uppercase mt-1">${c.conflicting_ingredient}</p>
@@ -276,7 +256,7 @@
             });
             fullHtml += '</div>';
 
-            visibleResults.forEach(conflict => {
+            audit_results.forEach(conflict => {
                 const escapedName = conflict.dish_name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
                 const regex = new RegExp(`(${escapedName})`, 'gi');
                 fullHtml = fullHtml.replace(regex, `<span class="conflict-diet_type_violation" title="${conflict.reason}">$1 ⚠️</span>`);

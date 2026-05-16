@@ -7,7 +7,36 @@ import { aiResponseSchema, aiSuggestionsSchema } from '../validators/dietAuditVa
  * Executes the AI Safety Audit
  * Grounded in BN Recipe Data to prevent hallucinations
  */
-export const generateAuditInference = async ({ client, dishes, extractedNames, medicalIssues, iclExclusions = [] }) => {
+export const generateAuditInference = async ({ client, dishes, extractedNames, iclExclusions = [] }) => {
+  // Prune dietary rules to only the client's relevant section — saves ~500 tokens per call
+  const habit = (client.eating_habit || '').toLowerCase().trim();
+  const dietaryRuleMap = {
+    vegetarian: `<vegetarian>
+        - STRICTLY FORBIDDEN: Meat, Poultry, Fish, Seafood, Egg.
+        - ALLOWED: Dairy (Paneer, Curd, Ghee, Milk, Whey — each independent).
+        - CRITICAL EXEMPTION — BRINJAL/BAINGAN/EGGPLANT: 100% vegetarian. NEVER flag as diet_type_violation.
+      </vegetarian>`,
+    'ovo vegetarian': `<ovo_vegetarian>
+        - STRICTLY FORBIDDEN: Meat, Poultry, Fish, Seafood.
+        - ALLOWED: Eggs, Dairy products.
+      </ovo_vegetarian>`,
+    vegan: `<vegan>
+        - STRICTLY FORBIDDEN: Meat, Poultry, Fish, Seafood, Eggs, ALL Dairy products.
+      </vegan>`,
+    jain: `<jain>
+        - STRICTLY FORBIDDEN: All items listed in "${client.avoided_jain_foods}".
+        - Flag any dish containing these as "diet_type_violation".
+      </jain>`,
+    'non vegetarian': `<non_vegetarian>
+        - ALLOWED: All foods EXCEPT stated allergies and aversions.
+      </non_vegetarian>`,
+    pescatarian: `<pescatarian>
+        - ALLOWED: Fish, Seafood, Dairy, Eggs, all plant-based foods.
+        - STRICTLY FORBIDDEN: Land animal meat (Beef, Pork, Lamb, Mutton).
+      </pescatarian>`,
+  };
+  const activeDietRule = dietaryRuleMap[habit] || dietaryRuleMap['non vegetarian'];
+
   const { object } = await generateObject({
     model: google('gemini-2.5-flash'), // Efficient speed-to-reasoning ratio
     schema: aiResponseSchema,
@@ -19,19 +48,18 @@ export const generateAuditInference = async ({ client, dishes, extractedNames, m
       google: {
         thinkingConfig: {
           includeThoughts: true,
-          thinkingBudget: 2048, // Increased budget for nuanced medical verification
+          thinkingBudget: 1024,
         },
       },
     }, // Step 6: Runtime validation
 
     system: `
  <system_instructions>
-    <role>You are a Senior Diet Safety Auditor. Your task is to audit Dishes and Dish ingredients against a client profile to avoid missing any conflicts with their Allergies, Aversions, medical issues and Diet Type with 100% accuracy .</role>
+    <role>You are a Senior Diet Safety Auditor. Your task is to audit Dishes and Dish ingredients against a client profile to identify any conflicts with the client's Allergies, Aversions, Diet Type, and ICL Exclusions with 100% accuracy.</role>
     <client_profile>
               - Diet Type : ${client.eating_habit}
               - Allergies : ${client.food_allergies || 'None'}
               - Aversions : ${client.food_aversions || 'None'}
-              - Medical Issues : ${medicalIssues || 'None'}
               - Jain Food Restrictions : ${client.avoided_jain_foods || 'None specified'}
     </client_profile>
     <audit_workflow>
@@ -40,71 +68,21 @@ export const generateAuditInference = async ({ client, dishes, extractedNames, m
       3. Categorize Conflicts:
           - Allergy Match -> "allergy_conflict"
           - Aversion Match -> "aversion_conflict"
-          - Medical Risk -> "medical_violation"
           - ICL Exclusion Match -> "icl_conflict"
           - Jain Food Restrictions Match -> "diet_type_violation"
       4. Consolidation: If a single dish has multiple conflicting ingredients, you MUST group them into one result for that dish. Combine the reasons into a single concise paragraph.
-      5. Medical Sensitivity Check: Apply "Moderation Aware" reasoning for natural sugars and dairy. 
-      6. Safety Verification Pass (Self-Correction): 
+      5. Safety Verification Pass (Self-Correction): 
           - Re-evaluate all potential flags. 
           - If a conclusion is "Safe in moderation", "Not a conflict", or "Placeholder only" -> REMOVE from the list.
-      7. Final JSON Generation: STRICTLY ONLY include verified, confirmed conflicts.
+      6. Final JSON Generation: STRICTLY ONLY include verified, confirmed conflicts.
     </audit_workflow>
-
-    <medical_sensitivity_logic>
-      - Minor Ingredient Exemption: DO NOT flag small ingredients, spices, garnishes, or trace condiments as medical conflicts.
-      - Main Component Rule: An ingredient MUST constitute the primary/main component of the dish (or be served in significant quantity) to trigger a medical conflict.
-      - Quantity Rule: Small quantities (e.g., <= 1 tsp) of natural sweeteners like Jaggery or Honey, or pinch of salt/spices are SAFE and should NOT be flagged unless they occur frequently (>3 times) in the menu.
-      - Form Matters: Jaggery and Honey are natural alternatives. Avoid flagging them for PCOS/Diabetes if used in minimal quantities (1 tsp). 
-      - Profile Specificity: 
-          - Non-Vegetarian: "Chicken", "Fish", "Egg" are SAFE. DO NOT flag unless a specific allergy to these proteins is listed.
-          - PCOS: Focus on excessive dairy (Large portions of Milk/Cheese) and high-GI refined items (White Bread, Sugar). 
-          - Diabetes: Focus on Refined Sugar (Chini) and Refined Flour (Maida). 
-    </medical_sensitivity_logic>
-
     <dietary_logic>   
-Priority: Medical Issues > Diet Type > Allergies > Aversions 
+Priority: Diet Type > Allergies > Aversions > ICL Exclusions
 
-      <medical_guidelines>
-        - Diabetes: Flag refined sugar, refined flour (Maida), and high-Glycemic simple carbs. Allow natural sweeteners in moderation (1 tsp).
-        - Hypertension/BP: Flag high sodium/salt ingredients, processed meats, and canned foods with preservatives.
-        - PCOS/PCOD: Flag hormonal disruptors, excessive high-fat dairy, and high-sugar processed foods. 
-        - Thyroid: Flag RAW cruciferous vegetables (Cabbage, Broccoli, Cauliflower) if the client has Hypothyroidism.
-        - Gastric/Acidity: Flag highly acidic, deep-fried, and spicy/chili-heavy foods.
-        - Cholesterol/Heart: Flag trans fats, excessive saturated fats (red meat, palm oil), and deep-fried items.
-      </medical_guidelines>
-
-      <vegetarian>
-        - STRICTLY FORBIDDEN: Meat, Poultry, Fish, Seafood, Egg.
-        - ALLOWED: Dairy consist of Paneer, Curd, Ghee, Milk, Whey {Each are independent of each other} milk is not equal to curd or paneer. 
-        - CRITICAL EXEMPTION — BRINJAL/BAINGAN/EGGPLANT: These are ALL the same vegetable. It is a 100% vegetarian ingredient. NEVER flag it as a diet_type_violation under ANY circumstance, even if listed as an ingredient in a dish. Flagging Brinjal for a Vegetarian is a CRITICAL ERROR.
-      </vegetarian>
-      <Ovo Vegetarian>
-        - STRICTLY FORBIDDEN: Meat, Poultry, Fish, Seafood.
-        - ALLOWED: Eggs, Dairy products.
-      </Ovo Vegetarian>
-      <vegan>
-        - STRICTLY FORBIDDEN: Meat, Poultry, Fish, Seafood, Eggs, ALL Dairy products.
-      </vegan>
-      <jain>
-        - IF ${client.jain_food_restrictions || client.avoided_jain_foods || 'None specified'} are present:
-          - STRICTLY FORBIDDEN: All items listed in the client's "${client.avoided_jain_foods}" field above.
-          - These are the specific foods the client has declared they avoid due to Jain dietary practices.
-          - Flag any dish containing these ingredients as a "diet_type_violation" with reason referencing Jain restrictions.
-        
-      </jain>
-      <non_vegetarian>
-        - ALLOWED: All foods EXCEPT stated allergies and aversions.
-      </non_vegetarian>
-      <pescatarian>
-        - ALLOWED: Fish and Seafood, Dairy products, Eggs, All plant-based foods.
-        - STRICTLY FORBIDDEN: Meat from land animals (Beef, Pork, Lamb, Mutton, etc.)
-      </pescatarian>
-      <lactose_intolerant_override>
-        - IF "Lactose Intolerant" is detected: 
-    - ACTION: EXEMPT [Curd, Yogurt, Raita, Ghee] from being flagged as "Lactose" violations. 
-    - REASON: Lactose has converted to Lactic Acid or fats. 
-      </lactose_intolerant_override>
+      ${activeDietRule}
+      ${(client.food_allergies || '').toLowerCase().includes('lactose') ? `<lactose_intolerant_override>
+        - EXEMPT [Curd, Yogurt, Raita, Ghee] from Lactose flags. Lactose converts to Lactic Acid in these.
+      </lactose_intolerant_override>` : ''}
       </dietary_logic>
       <grounding_rules>
       - Scan through (DB INGREDIENTS {Grounded}) and (Dishes from TEMPLATE).
@@ -121,11 +99,10 @@ Priority: Medical Issues > Diet Type > Allergies > Aversions
           - Example: "Besan → made from Chickpeas → Chickpeas are Pulses" is VALID if the client has a Pulse allergy or if Pulses violate their diet type (e.g., Vegan avoiding a Ghee-based dish).
           - Rationale: Allergies are a safety risk; diet type is a strict compliance requirement. Exhaustive tracing is warranted.
 
-        SHALLOW INFERENCE — Aversions (aversion_conflict) and Medical Issues (medical_violation):
+        SHALLOW INFERENCE — Aversions (aversion_conflict) and ICL Exclusions (icl_conflict):
           - You may ONLY flag if the conflicting item is DIRECTLY and LITERALLY named in the dish name or listed as a primary/direct ingredient — maximum ONE hop.
           - Example: If client has an aversion to "Pulses", you may flag a dish that lists "Chana" or "Rajma" as a direct ingredient. You may NOT flag "Besan" on the grounds that it is derived from Chickpeas which are Pulses — that is too many hops for an aversion.
-          - Example: If client has a medical issue with "Sugar", flag a dish listing "Sugar" or "Chini" directly — do not flag "Dates" because dates are sweet. One hop only.
-          - Rationale: Aversions are preferences, not safety issues. Medical sensitivity is already handled by the moderation-aware logic above. Over-inference creates false positives for these lower-priority categories.
+          - Rationale: Aversions are preferences, not safety issues. Over-inference creates false positives for these lower-priority categories.
       </inference_depth_rules>
       </grounding_rules>
       <output_rules>
@@ -136,12 +113,13 @@ Priority: Medical Issues > Diet Type > Allergies > Aversions
       </system_instructions>`
     ,
 
-    prompt: `Audit these dishes against the grounded database, medical conditions, and client Profile:
-         If and when Client's 'Allergy food', 'Aversion food' or 'Medical Issue' conflict is found in the Dish Name or its ingredients, flag it appropriately. Apply the nuance of "Moderation-Aware" logic before concluding.
+    prompt: `Audit these dishes against the grounded database and client Profile:
+         If and when Client's 'Allergy food', 'Aversion food', or 'ICL Exclusion' conflict is found in the Dish Name or its ingredients, flag it appropriately.
 
-              GROUNDED RECIPES (Detailed ingredients from DB): ${JSON.stringify(dishes)}
-              TEMPLATE DISH NAMES (Audit using general knowledge of their ingredients): ${JSON.stringify(extractedNames)}
-              CLIENT MEDICAL HISTORY: ${medicalIssues}
+              GROUNDED RECIPES (Detailed ingredients from DB):
+${dishes.map(d => `[${d.id}] ${d.title} | Ingredients: ${Array.isArray(d.ingredients) ? d.ingredients.join(', ') : d.ingredients}`).join('\n')}
+
+              TEMPLATE DISH NAMES (Audit using general knowledge): ${extractedNames.join(' | ')}
               CLIENT ICL EXCLUSIONS: ${iclExclusions && iclExclusions.length ? iclExclusions.join(', ') : 'None'}`
   })
   console.log(object.conflicts);
@@ -201,12 +179,47 @@ export const generateNutriScanAnalysis = async ({ imageBase64, textContent, clie
 export const generateAlternativeSuggestions = async ({
   conflicts,
   client,
-  medicalIssues,
   iclExclusions = [],
-  bnRecipePool
+  bnRecipePool,
+  clientEatingPatterns = {}
 }) => {
   // Skip if no conflicts detected
   if (!conflicts || conflicts.length === 0) return [];
+
+  // Build eating-pattern context block for the AI prompt
+  const {
+    recallDishes       = [],
+    highFrequencyFoods = [],
+    lowFrequencyFoods  = [],
+    preferredCuisines  = [],
+    foodPreferences    = []
+  } = clientEatingPatterns;
+
+  const eatingPatternsBlock = (recallDishes.length || highFrequencyFoods.length || preferredCuisines.length || foodPreferences.length)
+    ? `
+    <eating_patterns>
+      Use this data to steer alternative selections toward foods the client already accepts and enjoys.
+
+      High-Frequency Foods (Daily / Multiple times a week — PREFER alternatives from these food families):
+        ${highFrequencyFoods.length ? highFrequencyFoods.join(', ') : 'None recorded'}
+
+      Low-Frequency / Rarely Eaten (DEPRIORITISE — client is unlikely to accept these):
+        ${lowFrequencyFoods.length ? lowFrequencyFoods.join(', ') : 'None recorded'}
+
+      Food Preferences (Client-stated favourite foods — use these as positive signals):
+        ${foodPreferences.length ? foodPreferences.join(', ') : 'None recorded'}
+
+      Preferred Cuisines (Select alternatives from these cuisine traditions when possible):
+        ${preferredCuisines.length ? preferredCuisines.join(', ') : 'None recorded'}
+
+      Recent 24H Recall (Actual foods eaten — prioritise alternatives in the same food families):
+        ${recallDishes.length ? recallDishes.slice(0, 8).join(' | ') : 'None recorded'}
+
+      PRIORITY RULE: Among valid options in the BN Recipe Pool, always prefer those whose
+      category or ingredients align with the client's high-frequency foods and cuisine preferences.
+      Avoid suggesting foods they "Rarely" eat unless no other suitable option exists in the pool.
+    </eating_patterns>`
+    : '';
 
   const { object } = await generateObject({
     model: google('gemini-2.5-flash'),
@@ -219,7 +232,7 @@ export const generateAlternativeSuggestions = async ({
       google: {
         thinkingConfig: {
           includeThoughts: true,
-          thinkingBudget: 2048,
+          thinkingBudget: 1024, // Reduced: RAG provides targeted context, less reasoning needed
         },
       },
     },
@@ -232,9 +245,9 @@ export const generateAlternativeSuggestions = async ({
       - Diet Type: ${client.eating_habit}
       - Allergies: ${client.food_allergies || 'None'}
       - Aversions: ${client.food_aversions || 'None'}
-      - Medical Issues: ${medicalIssues || 'None'}
       - ICL Exclusions: ${iclExclusions.length ? iclExclusions.join(', ') : 'None'}
     </client_profile>
+${eatingPatternsBlock}
 
     <decision_rules>
       CLASSIFY each conflict into ONE of two suggestion types:
@@ -298,10 +311,10 @@ export const generateAlternativeSuggestions = async ({
     prompt: `Generate smart alternative suggestions for these flagged conflicts.
 
     FLAGGED CONFLICTS:
-    ${JSON.stringify(conflicts, null, 2)}
+${conflicts.map(c => `- dish: "${c.dish_name}" | type: ${c.conflict_type} | ingredient: ${c.conflicting_ingredient} | context: ${c.meal_context}`).join('\n')}
 
-    BN RECIPE POOL (ONLY suggest from this list):
-    ${JSON.stringify(bnRecipePool)}
+    BN RECIPE POOL (id|title|category|ingredients):
+${bnRecipePool.map(r => `${r.id}|${r.title}|${r.category_name}|${Array.isArray(r.ingredients) ? r.ingredients.slice(0, 5).join(',') : String(r.ingredients).slice(0, 80)}`).join('\n')}
     
     For each conflict, classify it and provide the appropriate suggestion.`
   });

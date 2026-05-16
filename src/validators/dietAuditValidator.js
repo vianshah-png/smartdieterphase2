@@ -14,6 +14,11 @@ export const dietAuditValidator = [
     .isNumeric()
     .withMessage("diet_id is required to identify the template to audit"),
 
+  body("assessment_id")
+    .optional()
+    .isNumeric()
+    .withMessage("assessment_id must be a number (from the assessment-list API response)"),
+
   body("generate_alternatives")
     .optional()
     .isBoolean()
@@ -27,7 +32,7 @@ export const aiResponseSchema = z.object({
   conflicts: z.array(z.object({
     dish_name: z.string(),
     conflicting_ingredient: z.string(),
-    conflict_type: z.enum(['diet_type_violation', 'allergy_conflict', 'aversion_conflict', 'medical_violation', 'icl_conflict']),
+    conflict_type: z.enum(['diet_type_violation', 'allergy_conflict', 'aversion_conflict', 'icl_conflict']),
     reason: z.string(),
     suggested_alternative: z.string().optional()
   }))

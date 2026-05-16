@@ -13,6 +13,7 @@ import { ApiResponse } from "../../utils/APiResponse.js";
 import { ErrorHandler } from "../../utils/ErrorClass.js";
 import { safeJSONParse } from "../../helper/commonHelper.js";
 import { storeEmbedding } from "../../config/qDrantConfig.js";
+import { upsertRecipeEmbedding, removeRecipeEmbedding } from "../../services/embeddingService.js";
 import { v4 as uuidv4 } from "uuid";
 import moment from "moment";
 import { insertUserVisitLog } from "../../helper/common.js";
@@ -193,6 +194,25 @@ const addNewRecipe = async (req, res, next) => {
         collection: "content",
       });
     });
+
+    // RAG: Generate and store text embedding for the new recipe (fire-and-forget)
+    upsertRecipeEmbedding({
+      id: newRecipe.insertId,
+      title,
+      slug,
+      ingredients,
+      category_id,
+      recipe_type_id,
+      calories,
+      protein,
+      fat,
+      carbs,
+      fiber,
+      health_tags,
+      nutrition_tags,
+      allergy_tags,
+    }).catch(err => console.error('RAG embed error (add):', err.message));
+
     const apiResponse = new ApiResponse({
       statusCode: 201,
       message: "Recipe added successfully",
@@ -1164,6 +1184,30 @@ const updateRecipes = async (req, res, next) => {
           collection: "content",
         });
       });
+
+      // RAG: Re-generate text embedding for the updated recipe (fire-and-forget)
+      // Fetch fresh data to ensure embedding matches current state
+      readRecord({
+        table: `${tables.recipe} r`,
+        selectFields: [
+          'r.id', 'r.title', 'r.slug', 'r.ingredients',
+          'r.recipe_type_id', 'r.category_id',
+          'r.calories', 'r.protein', 'r.fat', 'r.carbs', 'r.fiber',
+          'r.health_tags', 'r.nutrition_tags', 'r.allergy_tags',
+          'c.category_name'
+        ],
+        joins: [
+          { type: 'LEFT', table: `${tables.category} c`, on: 'r.category_id = c.category_id' },
+        ],
+        conditions: [{ field: 'r.id', operator: '=', value: parseInt(id) }],
+      }).then(({ results }) => {
+        if (results.length > 0) {
+          upsertRecipeEmbedding(results[0]).catch(err =>
+            console.error('RAG embed error (update):', err.message)
+          );
+        }
+      }).catch(err => console.error('RAG fetch error (update):', err.message));
+
       const apiResponse = new ApiResponse({
         statusCode: 200,
         message: `recipe ${id} Updated Successfully`,
@@ -1242,6 +1286,12 @@ const deleteRecipe = async (req, res, next) => {
     if (!deletedRecipe) {
       return next(new ErrorHandler("Error While deleting recipe", 400));
     }
+
+    // RAG: Remove recipe embedding from vector index (fire-and-forget)
+    removeRecipeEmbedding(parseInt(id)).catch(err =>
+      console.error('RAG delete error:', err.message)
+    );
+
     const apiResponse = new ApiResponse({
       statusCode: 200,
       message: `recipe ${id} deleted Successfully`,
