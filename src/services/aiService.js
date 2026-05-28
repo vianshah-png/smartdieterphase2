@@ -175,18 +175,19 @@ export const generateNutriScanAnalysis = async ({ imageBase64, textContent, clie
 /**
  * Phase 3: Generates smart alternative suggestions for conflicting dishes
  * Uses a pre-filtered BN recipe pool (Structured RAG) to stay grounded
+ * Optimised for minimal token consumption with self-correction
  */
 export const generateAlternativeSuggestions = async ({
   conflicts,
   client,
   iclExclusions = [],
   bnRecipePool,
+  isHeavyClient = false,
   clientEatingPatterns = {}
 }) => {
-  // Skip if no conflicts detected
   if (!conflicts || conflicts.length === 0) return [];
 
-  // Build eating-pattern context block for the AI prompt
+  // ─── Compact eating-pattern context (token-efficient) ────────────────
   const {
     recallDishes       = [],
     highFrequencyFoods = [],
@@ -195,128 +196,110 @@ export const generateAlternativeSuggestions = async ({
     foodPreferences    = []
   } = clientEatingPatterns;
 
-  const eatingPatternsBlock = (recallDishes.length || highFrequencyFoods.length || preferredCuisines.length || foodPreferences.length)
-    ? `
-    <eating_patterns>
-      Use this data to steer alternative selections toward foods the client already accepts and enjoys.
+  const hasPatterns = recallDishes.length || highFrequencyFoods.length || preferredCuisines.length;
+  const patternsBlock = hasPatterns
+    ? `<patterns>
+      Prefer: ${[...highFrequencyFoods.slice(0, 6), ...foodPreferences.slice(0, 4)].join(', ') || '-'}
+      Avoid: ${lowFrequencyFoods.slice(0, 5).join(', ') || '-'}
+      Cuisines: ${preferredCuisines.slice(0, 3).join(', ') || '-'}
+      Recall: ${recallDishes.slice(0, 5).join(', ') || '-'}
+      RULE: Prefer pool recipes matching these patterns. Avoid low-frequency foods unless no alternative exists.
+    </patterns>`
+    : '';
 
-      High-Frequency Foods (Daily / Multiple times a week — PREFER alternatives from these food families):
-        ${highFrequencyFoods.length ? highFrequencyFoods.join(', ') : 'None recorded'}
+  // ─── Weight context ──────────────────────────────────────────────────
+  const cw = parseFloat(client.current_weight) || 0;
+  const gw = parseFloat(client.goal_weight) || 0;
+  let weightBlock = '';
+  let weightDirection = 'MAINTAIN';
+  if (cw && gw) {
+    weightDirection = cw > gw ? 'LOSS' : cw < gw ? 'GAIN' : 'MAINTAIN';
+    weightBlock = `<weight goal="${weightDirection}" current="${cw}kg" target="${gw}kg"/>`;
+  }
 
-      Low-Frequency / Rarely Eaten (DEPRIORITISE — client is unlikely to accept these):
-        ${lowFrequencyFoods.length ? lowFrequencyFoods.join(', ') : 'None recorded'}
-
-      Food Preferences (Client-stated favourite foods — use these as positive signals):
-        ${foodPreferences.length ? foodPreferences.join(', ') : 'None recorded'}
-
-      Preferred Cuisines (Select alternatives from these cuisine traditions when possible):
-        ${preferredCuisines.length ? preferredCuisines.join(', ') : 'None recorded'}
-
-      Recent 24H Recall (Actual foods eaten — prioritise alternatives in the same food families):
-        ${recallDishes.length ? recallDishes.slice(0, 8).join(' | ') : 'None recorded'}
-
-      PRIORITY RULE: Among valid options in the BN Recipe Pool, always prefer those whose
-      category or ingredients align with the client's high-frequency foods and cuisine preferences.
-      Avoid suggesting foods they "Rarely" eat unless no other suitable option exists in the pool.
-    </eating_patterns>`
+  // ─── Heavy client rule (>100kg) ──────────────────────────────────────
+  const heavyRule = isHeavyClient
+    ? `<heavy_client_rule>
+        Client weighs >100kg. For lunch/dinner conflicts: alternatives MUST follow the structure:
+        Salad or Sabzi + 2 Roti or Rice + 50-100gms Protein.
+        Protein source: ${(client.eating_habit || '').toLowerCase().includes('non') ? 'Chicken/Fish/Egg' : 'Paneer/Tofu/Dal/Soya'}.
+      </heavy_client_rule>`
     : '';
 
   const { object } = await generateObject({
     model: google('gemini-2.5-flash'),
     schema: aiSuggestionsSchema,
-    temperature: 0.2,
-    top_p: 0.3,
-    top_k: 5,
+    temperature: 0.15,
+    top_p: 0.25,
+    top_k: 3,
     seed: 141,
     providerOptions: {
       google: {
         thinkingConfig: {
           includeThoughts: true,
-          thinkingBudget: 1024, // Reduced: RAG provides targeted context, less reasoning needed
+          thinkingBudget: 800,
         },
       },
     },
 
-    system: `
- <system_instructions>
-    <role>You are a Senior Diet Recovery Specialist. Your task is to suggest safe alternatives for dishes that have been flagged as conflicting with a client's diet profile. You must ONLY suggest dishes from the PROVIDED BN Recipe Pool below — never invent or hallucinate dishes.</role>
-    
-    <client_profile>
-      - Diet Type: ${client.eating_habit}
-      - Allergies: ${client.food_allergies || 'None'}
-      - Aversions: ${client.food_aversions || 'None'}
-      - ICL Exclusions: ${iclExclusions.length ? iclExclusions.join(', ') : 'None'}
-    </client_profile>
-${eatingPatternsBlock}
+    system: `<role>Senior Diet Recovery Specialist. Suggest safe alternatives for flagged conflicts. ONLY use the BN Recipe Pool provided — never invent dishes.</role>
 
-    <decision_rules>
-      CLASSIFY each conflict into ONE of two suggestion types:
+<client diet="${client.eating_habit}" allergies="${client.food_allergies || 'None'}" aversions="${client.food_aversions || 'None'}" icl="${iclExclusions.length ? iclExclusions.join(', ') : 'None'}"/>
+${weightBlock}
+${patternsBlock}
+${heavyRule}
 
-      USE "ingredient_swap" WHEN:
-        - The conflict involves exactly ONE minor/non-core ingredient
-        - The ingredient is NOT the defining element of the dish (e.g., a garnish, topping, or secondary component)
-        - Removing or swapping it would NOT change the dish's identity
-        - The conflict_type is "aversion_conflict" or "icl_conflict" with a single item
-        - Example: Milk in a dosa batter → "Use water or coconut milk instead of Milk"
+<meal_rules>
+  BREAKFAST conflicts:
+    - Suggest 1 salt-free option + 2 regular options when possible
+    - Salt-free = no added salt (e.g. fruit bowl, smoothie, overnight oats)
+  LUNCH conflicts:
+    - Alternatives should fit rice-based OR roti-based meal combos
+    - Match the structure of the existing lunch combo (if Group context)
+  DINNER conflicts:
+    - Lean heavily on client's food recall and preferences
+    - Dinner is flexible — prioritise familiarity over rigid structure
+  WEIGHT ${weightDirection} RULE:
+    - ${weightDirection === 'LOSS' ? 'Prefer lower-calorie, high-fibre, high-protein alternatives' : weightDirection === 'GAIN' ? 'Prefer calorie-dense, nutrient-rich alternatives' : 'Maintain balanced macro profile'}
+</meal_rules>
 
-      USE "full_replacement" WHEN:
-        - The conflicting ingredient IS the core/hero ingredient of the dish (e.g., Chicken in Chicken Tikka)
-        - The conflict_type is "diet_type_violation" — the entire dish category is wrong
-        - The conflict_type is "allergy_conflict" — safety-first, always replace fully
-        - There are MULTIPLE conflicting ingredients in the same dish
-        - Example: Chicken Tikka for a Vegetarian → suggest Paneer Tikka, Soya Tikka, etc.
-    </decision_rules>
+<decision_rules>
+  "ingredient_swap": ONE minor non-core ingredient conflict (garnish/topping). Provide swap instruction only.
+  "full_replacement": Core ingredient conflict, diet_type_violation, allergy, or multiple conflicts. Select up to 3 alternatives from pool.
+</decision_rules>
 
-    <suggestion_rules>
-      For "ingredient_swap":
-        - Provide a clear, specific swap instruction (e.g., "Replace Milk with Almond Milk or Coconut Milk")
-        - Do NOT include alternative_dishes — leave it empty
-      
-      For "full_replacement":
-        - Select exactly 3 alternative dishes from the BN RECIPE POOL below
-        - Each alternative MUST be a recipe from the pool (use its exact id, title, slug, and category_name)
-        - Each alternative must be safe and non repetitive for ALL of the client's constraints (diet type, allergies, aversions, medical, ICL)
-        
-        CRITICAL — Food Type Matching Rule:
-        The alternative MUST be the SAME food type/category as the conflicting dish. This is the #1 priority.
-        Food type taxonomy:
-          - Liquid (soup, smoothie, juice, shake, buttermilk, lassi, coffee, tea) → replace with another Liquid
-          - Rice (brown rice, white rice, jeera rice, pulao) → replace with another Rice dish (at least 2 of 3 alternatives MUST be rice-based)
-          - Bread/Roti (roti, paratha, naan, thepla, puri) → replace with another Bread
-          - Salad (green salad, raita, kachumber) → replace with another Salad/side
-          - Dal/Lentil (dal, sambar, rasam) → replace with another Dal/Lentil
-          - Sabzi/Curry (any cooked vegetable/paneer dish) → replace with another Sabzi/Curry
-          - Snack (cookie, chips, makhana, namkeen) → replace with another Snack
-          - Full meal (biryani, khichdi, frankie, wrap, sandwich) → replace with another Full meal
+<food_type_matching>
+  #1 PRIORITY: Alternative MUST match the same food type as the conflict dish.
+  Liquid→Liquid | Rice→Rice | Bread→Bread | Salad→Salad | Dal→Dal | Sabzi→Sabzi | Snack→Snack | Full meal→Full meal
+  
+  Context rules (read "meal_context" on each conflict):
+  - "[slot] Group": dish is part of a combo with companions. Replace with same food type that pairs with listed companions.
+  - "[slot] Standalone": independent option. Match food type only.
+</food_type_matching>
 
-        Meal Context Rule (read the "meal_context" field on each conflict):
-          - "Group Alternative": The conflicting dish is part of a combo with companion dishes listed. The alternative must:
-              1. Be the same food type as the conflict dish (e.g. soup → soup/liquid, rice → rice)
-              2. Pair naturally with the listed companion dishes
-              Example: If soup is the conflict and sandwich is the companion → suggest another liquid (smoothie, buttermilk, another soup variety) — NOT a frankie or roti
-          - "Standalone Alternative": The conflicting dish is an independent option. Only match food type.
-        
-        - Provide a 1-line reason for why each alternative is a safe swap and matches the food type
-        - Do NOT include swap_instruction — leave it empty
-    </suggestion_rules>
+<grounding>
+  - ONLY select from BN RECIPE POOL in prompt. Never invent IDs/titles/slugs.
+  - Output recipe_id, title, slug, category_name must EXACTLY match a pool entry.
+  - If <3 suitable recipes exist, return 1 or 2.
+</grounding>
 
-    <grounding_rules>
-      - You may ONLY select alternatives from the BN RECIPE POOL provided in the prompt
-      - NEVER invent recipe names, IDs, slugs, or category_names
-      - If the pool has fewer than 3 suitable recipes, return as many as you can find (1 or 2)
-      - The recipe_id, title, slug, and category_name in your output MUST exactly match an entry from the pool
-    </grounding_rules>
- </system_instructions>`,
+<self_correction>
+  BEFORE finalising each suggestion, run this verification checklist:
+  1. SAFE? Does the alternative contain ANY of the client's allergens, aversions, or ICL exclusions? If YES → DISCARD and pick another.
+  2. TYPE MATCH? Is the alternative the same food type as the conflict dish? If NO → DISCARD and pick another.
+  3. COMBO FIT? If "Group" context, does the alternative pair naturally with the listed companions? If NO → DISCARD.
+  4. POOL VALID? Is the recipe_id/title/slug EXACTLY from the provided pool? If NO → DISCARD.
+  5. DUPLICATE? Have you already suggested this dish for another conflict? If YES → pick a different one.
+  If ALL 5 pass → include. If any fail → replace with the next best candidate from the pool.
+</self_correction>`,
 
-    prompt: `Generate smart alternative suggestions for these flagged conflicts.
+    prompt: `CONFLICTS:
+${conflicts.map(c => `- "${c.dish_name}" | ${c.conflict_type} | ing: ${c.conflicting_ingredient || '-'} | ${c.meal_context}`).join('\n')}
 
-    FLAGGED CONFLICTS:
-${conflicts.map(c => `- dish: "${c.dish_name}" | type: ${c.conflict_type} | ingredient: ${c.conflicting_ingredient} | context: ${c.meal_context}`).join('\n')}
+POOL (id|title|cat|ingredients):
+${bnRecipePool.map(r => `${r.id}|${r.title}|${r.category_name}|${Array.isArray(r.ingredients) ? r.ingredients.slice(0, 4).join(',') : String(r.ingredients).slice(0, 60)}`).join('\n')}
 
-    BN RECIPE POOL (id|title|category|ingredients):
-${bnRecipePool.map(r => `${r.id}|${r.title}|${r.category_name}|${Array.isArray(r.ingredients) ? r.ingredients.slice(0, 5).join(',') : String(r.ingredients).slice(0, 80)}`).join('\n')}
-    
-    For each conflict, classify it and provide the appropriate suggestion.`
+Classify each conflict and provide suggestions. Apply self-correction before output.`
   });
 
   console.log('📋 AI Suggestions:', JSON.stringify(object.suggestions, null, 2));

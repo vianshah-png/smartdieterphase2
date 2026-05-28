@@ -66,7 +66,7 @@ const fetchFoodFrequency = async (user_id, assessment_id) => {
     const items = Array.isArray(json?.data) ? json.data : [];
 
     const HIGH_FREQ_LABELS = ['daily', 'twice a week', 'thrice a week', 'multiple times', 'every day'];
-    const LOW_FREQ_LABELS  = ['rarely', 'once in 15 days', 'once a month', 'never'];
+    const LOW_FREQ_LABELS = ['rarely', 'once in 15 days', 'once a month', 'never'];
 
     const high = [], low = [];
     items.forEach(({ food_name, value }) => {
@@ -106,7 +106,7 @@ const fetchNutritionLifestyle = async (user_id, assessment_id) => {
     try {
       const raw = data.preferred_cuisine;
       const cuisineObj = typeof raw === 'string' ? JSON.parse(raw) : raw;
-      const main   = Object.values(cuisineObj?.cuisine       || {});
+      const main = Object.values(cuisineObj?.cuisine || {});
       const others = Object.values(cuisineObj?.other_cuisine || {});
       preferredCuisines = [...main, ...others].filter(Boolean);
     } catch { /* ignore */ }
@@ -154,12 +154,14 @@ export const runDietComplianceAudit = async (req, res, next) => {
   try {
     const { user_id, diet_id, is_edit, generate_alternatives = true, assessment_id } = req.body;
 
-    // STEP 1 & 2: Get Client Context (Eating Habit, Allergies)
+    // STEP 1 & 2: Get Client Context (Eating Habit, Allergies, Weight)
     const { results: clientContext } = await readRecord({
       table: `${tables.userDetails} ud`,
       selectFields: [
         "ud.country_id",
         "c.country_name",
+        "ud.latest_weight as current_weight",
+        `(SELECT aspd.goal_weight FROM ${tables.assessment_personal_details} aspd WHERE aspd.user_id = ud.user_id ORDER BY aspd.personal_details_id DESC LIMIT 1) as goal_weight`,
         "ass_n_l.eating_habit",
         "ass_n_l.food_allergies",
         "ass_n_l.food_aversions",
@@ -195,13 +197,13 @@ export const runDietComplianceAudit = async (req, res, next) => {
         fetchFoodFrequency(user_id, assessment_id),
         fetchNutritionLifestyle(user_id, assessment_id)
       ]);
-      recallDishes        = recallResult.status === 'fulfilled'  ? recallResult.value         : [];
-      const freq          = freqResult.status   === 'fulfilled'  ? freqResult.value           : { high: [], low: [] };
-      highFrequencyFoods  = freq.high;
-      lowFrequencyFoods   = freq.low;
-      const nl            = nlResult.status     === 'fulfilled'  ? nlResult.value             : { foodPreferences: [], preferredCuisines: [] };
-      foodPreferences     = nl.foodPreferences;
-      preferredCuisines   = nl.preferredCuisines;
+      recallDishes = recallResult.status === 'fulfilled' ? recallResult.value : [];
+      const freq = freqResult.status === 'fulfilled' ? freqResult.value : { high: [], low: [] };
+      highFrequencyFoods = freq.high;
+      lowFrequencyFoods = freq.low;
+      const nl = nlResult.status === 'fulfilled' ? nlResult.value : { foodPreferences: [], preferredCuisines: [] };
+      foodPreferences = nl.foodPreferences;
+      preferredCuisines = nl.preferredCuisines;
     } else {
       console.warn('⚠️ assessment_id not provided — skipping BN assessment enrichment');
     }
@@ -354,51 +356,97 @@ export const runDietComplianceAudit = async (req, res, next) => {
         // Deduplicate auditResults to reduce token usage and duplicate generations
         const dedupedConflictsMap = new Map();
 
-        // Build per-slot meal lines for accurate combo detection
-        const mealSlots = [
-          dietData.on_rising, dietData.breakfast, dietData.mid_morning,
-          dietData.lunch, dietData.post_lunch, dietData.tea_eve,
-          dietData.pre_workout, dietData.post_workout, dietData.dinner,
-          dietData.pre_dinner, dietData.post_dinner, dietData.bed_time
-        ].filter(Boolean);
+        // ─── Named Meal Slot Map ────────────────────────────────────────────
+        // Track the originating slot name for each line so the AI knows which
+        // meal-specific rules to apply (breakfast / lunch / dinner etc.)
+        const SLOT_NAMES = [
+          'on_rising', 'breakfast', 'mid_morning', 'lunch', 'post_lunch',
+          'tea_eve', 'pre_workout', 'post_workout', 'dinner',
+          'pre_dinner', 'post_dinner', 'bed_time'
+        ];
+        const namedSlots = SLOT_NAMES
+          .map(name => ({ name, html: dietData[name] }))
+          .filter(s => s.html);
 
-        // Split each slot by OR boundaries to get individual option lines
-        const mealLines = [];
-        mealSlots.forEach(slot => {
-          const options = slot.split(/(?:(?:<br\s*\/?>|\n)\s*)*\bOR\b(?:\s*(?:<br\s*\/?>|\n)\s*)*/gi);
-          options.forEach(opt => {
-            const cleaned = opt.replace(/<[^>]+>/g, ' ').trim();
-            if (cleaned) mealLines.push(cleaned);
+        // ─── Combo Structure Parsing ────────────────────────────────────────
+        // Diet text anatomy:
+        //   OR   → separates full combos (mutually exclusive meal options)
+        //   +    → separates components within a combo (eaten together)
+        //   /    → separates interchangeable options within a component
+        //
+        // Example: "1 bowl soup / 1 glass juice + 1 sandwich / 1 roll OR 2 idli + chutney"
+        //   Combo 1: Component[soup|juice]  +  Component[sandwich|roll]
+        //   Combo 2: Component[idli]         +  Component[chutney]
+
+        /** Strips bracket/parenthesis content to avoid false '+' matches inside e.g. [makai + bateta] */
+        const stripBrackets = (s) => s.replace(/\[[^\]]*\]/g, '§').replace(/\([^)]*\)/g, '§');
+
+        /**
+         * Parses a single combo string into its component groups.
+         * Each component is an array of interchangeable options.
+         * Returns: Array<string[]>  e.g. [["soup", "juice"], ["sandwich", "roll"]]
+         */
+        const parseComboComponents = (comboStr) => {
+          const safeStr = stripBrackets(comboStr);
+          // Split by '+' only where it appears OUTSIDE brackets (already stripped)
+          const rawComponents = safeStr.split(/\s\+\s/);
+          // Map back to original text segments using index tracking
+          const origComponents = comboStr.split(/\s\+\s/);
+          return origComponents.map(comp => {
+            // Each component may have '/' options
+            return comp.split(/\s\/\s/).map(opt =>
+              opt.replace(/<[^>]+>/g, ' ')
+                .replace(/\d+\s*(bowl|cup|tsp|tbsp|gms?|g|ml|serving|piece|slice|nos?|plate|glass|scoop)s?\s*/gi, '')
+                .trim()
+            ).filter(o => o.length > 1);
+          });
+        };
+
+        /**
+         * For a given conflict dish inside a combo, finds the companion components.
+         * Returns companion dish names (the other '+' segments the user eats alongside).
+         */
+        const getCompanionDishes = (comboStr, conflictDishName) => {
+          const components = parseComboComponents(comboStr);
+          const conflictLower = conflictDishName.toLowerCase();
+          const companions = [];
+          components.forEach(opts => {
+            const containsConflict = opts.some(o => o.toLowerCase().includes(conflictLower));
+            if (!containsConflict) {
+              companions.push(...opts);
+            }
+          });
+          return companions;
+        };
+
+        /** Detects if a combo string has '+' OUTSIDE brackets */
+        const hasComboPlus = (comboStr) => /\s\+\s/.test(stripBrackets(comboStr));
+
+        // ─── Build enriched meal lines with slot names ──────────────────────
+        // Each entry: { slotName, comboText, comboIndex }
+        const mealEntries = [];
+        namedSlots.forEach(({ name, html }) => {
+          // Split by OR boundaries (with optional <br> padding)
+          const combos = html.split(/(?:(?:<br\s*\/?>|\n)\s*)*\bOR\b(?:\s*(?:<br\s*\/?>|\n)\s*)*/gi);
+          combos.forEach((combo, idx) => {
+            const cleaned = combo.replace(/<[^>]+>/g, ' ').trim();
+            if (cleaned) {
+              mealEntries.push({ slotName: name, comboText: cleaned, comboIndex: idx });
+            }
           });
         });
 
-        /**
-         * Detects if a line is a combo (has '+' OUTSIDE brackets/parentheses)
-         * e.g. "1 bowl soup + 1 sandwich" → true (combo)
-         * e.g. "1 bowl shaak [makai + bateta]" → false ('+' is inside brackets, not a combo separator)
-         */
-        const hasComboPlus = (line) => {
-          // Strip bracket and parenthesis content first
-          const stripped = line.replace(/\[[^\]]*\]/g, '').replace(/\([^)]*\)/g, '');
-          return /\s\+\s/.test(stripped);
-        };
-
-        /**
-         * Extracts clean companion dish names from a combo line
-         * e.g. "1 bowl soup + 1 sandwich + 1 bowl dal" with conflict "soup"
-         *    → companions: ["sandwich", "dal"]
-         */
-        const getCompanionDishes = (line, conflictDishName) => {
-          const stripped = line.replace(/\[[^\]]*\]/g, '').replace(/\([^)]*\)/g, '');
-          // Split the combo by '/' first to get alternatives, then by '+' to get items
-          const segments = stripped.split(/\s\/\s/).flatMap(seg => seg.split(/\s\+\s/));
-          return segments
-            .map(s => s.replace(/\d+\s*(bowl|cup|tsp|tbsp|gms?|serving|piece|slice|nos?)\s*/gi, '').trim())
-            .filter(s => s.length > 1 && !s.toLowerCase().includes(conflictDishName.toLowerCase()));
-        };
+        // ─── Weight-goal direction (for RAG query enrichment) ───────────────
+        const currentWeight = parseFloat(clientContext[0].current_weight) || 0;
+        const goalWeight = parseFloat(clientContext[0].goal_weight) || 0;
+        let weightGoalHint = '';
+        if (currentWeight && goalWeight) {
+          if (currentWeight > goalWeight) weightGoalHint = ', lower calorie, high fibre';
+          else if (currentWeight < goalWeight) weightGoalHint = ', calorie dense, protein rich';
+        }
+        const isHeavyClient = currentWeight > 100;
 
         auditResults.forEach(c => {
-          // Group by conflict_type and reason (or conflicting_ingredient). This acts as a unique signature.
           const sig = c.conflicting_ingredient
             ? `${c.conflict_type}_${c.conflicting_ingredient.toLowerCase().trim()}`
             : c.dish_name.toLowerCase().trim();
@@ -406,38 +454,37 @@ export const runDietComplianceAudit = async (req, res, next) => {
           if (!dedupedConflictsMap.has(sig)) {
             const dishNameLower = c.dish_name.toLowerCase().trim();
 
-            // Find the meal line that contains this dish
-            const matchingLine = mealLines.find(line => line.toLowerCase().includes(dishNameLower));
+            // Find the meal entry that contains this dish
+            const matchingEntry = mealEntries.find(e => e.comboText.toLowerCase().includes(dishNameLower));
+            const slotName = matchingEntry ? matchingEntry.slotName : 'unknown';
 
             let contextStr;
-            if (matchingLine && hasComboPlus(matchingLine)) {
-              const companions = getCompanionDishes(matchingLine, c.dish_name);
-              contextStr = `Group Alternative: "${c.dish_name}" is paired in a combo with: [${companions.join(', ')}]. The alternative MUST be the same food type/category as "${c.dish_name}" (e.g. liquid→liquid, rice→rice, bread→bread) and pair well with [${companions.join(', ')}].`;
+            if (matchingEntry && hasComboPlus(matchingEntry.comboText)) {
+              const companions = getCompanionDishes(matchingEntry.comboText, c.dish_name);
+              contextStr = `[${slotName}] Group: "${c.dish_name}" + [${companions.join(', ')}]. Replace with same food type that pairs with companions.`;
             } else {
-              contextStr = `Standalone Alternative: "${c.dish_name}" appears as a standalone option (separated by '/' or 'OR'). Suggest alternatives that match the same food type/category as "${c.dish_name}".`;
+              contextStr = `[${slotName}] Standalone: "${c.dish_name}". Replace with same food type.`;
             }
 
-            dedupedConflictsMap.set(sig, { ...c, meal_context: contextStr });
+            dedupedConflictsMap.set(sig, { ...c, meal_context: contextStr, meal_slot: slotName });
           }
         });
         const uniqueConflicts = Array.from(dedupedConflictsMap.values());
         console.log(`🧩 Original conflicts: ${auditResults.length}, Unique conflicts to process: ${uniqueConflicts.length}`);
 
-        // RAG RETRIEVAL: Semantic vector search per conflict instead of SQL dump
-        // Build a combined pool from targeted searches per conflict dish
-        // RAG queries are enriched with the client's real eating patterns for better vector alignment
-        const ragPoolMap = new Map(); // dedup by recipe ID
+        // ─── RAG RETRIEVAL: Semantic vector search per conflict ─────────────
+        const ragPoolMap = new Map();
 
         // Build enrichment suffix once (shared across all conflict queries)
-        const recallContext   = recallDishes.length
-          ? `, familiar to someone who eats: ${recallDishes.slice(0, 5).join(', ')}`
+        const recallContext = recallDishes.length
+          ? `, familiar: ${recallDishes.slice(0, 4).join(', ')}`
           : '';
-        const cuisineContext  = preferredCuisines.length
-          ? `, preferred cuisines: ${preferredCuisines.slice(0, 3).join(', ')}`
+        const cuisineContext = preferredCuisines.length
+          ? `, cuisine: ${preferredCuisines.slice(0, 2).join(', ')}`
           : '';
 
         for (const conflict of uniqueConflicts) {
-          const searchQuery = `Safe ${habit} alternative for ${conflict.dish_name}, same food category and type${recallContext}${cuisineContext}`;
+          const searchQuery = `${habit} ${conflict.dish_name} alternative, same food type${weightGoalHint}${recallContext}${cuisineContext}`;
           console.log(`🔍 RAG search: "${searchQuery}"`);
 
           const results = await searchSimilarRecipes({
@@ -465,14 +512,15 @@ export const runDietComplianceAudit = async (req, res, next) => {
           ingredients: r.ingredients ? r.ingredients.split(', ') : []
         }));
 
-        console.log(`📦 RAG pool: ${trimmedPool.length} targeted recipes (was 60 with SQL dump)`);
+        console.log(`📦 RAG pool: ${trimmedPool.length} targeted recipes`);
 
-        // STEP 6C: Call AI to generate smart suggestions (enriched with eating patterns)
+        // STEP 6C: Call AI to generate smart suggestions
         const aiResponseSuggestions = await generateAlternativeSuggestions({
           conflicts: uniqueConflicts,
           client: clientContext[0],
           iclExclusions,
           bnRecipePool: trimmedPool,
+          isHeavyClient,
           clientEatingPatterns: {
             recallDishes,
             highFrequencyFoods,
