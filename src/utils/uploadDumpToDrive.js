@@ -1,6 +1,6 @@
 import fs from "fs";
 import { google } from "googleapis";
-import apiKeys from "./../../driveApiKey.json" with { type: "json" };
+import apiKeys from "../../driveApiKey.json" with { type: "json" };
 import path from "path";
 import { Readable } from "stream";
 import { fileURLToPath } from "url";
